@@ -1,0 +1,3 @@
+id,number_comments,number_users,number_contributors,number_core_devs,opened_by,number_of_patches,words_in_discussionwords_per_comment_in_discussion,snippets_size,mean_time_between_replies,discussion_length
+1,3,0,0,1,employee,0,10,3.3333333333333335,0,0.0,0
+2,1,0,0,1,employee,0,4,4.0,0,0.0,0

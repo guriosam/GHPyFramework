@@ -1,0 +1,26 @@
+[
+    {
+        "id": 3536068866,
+        "issue_number": 1,
+        "event": "labeled",
+        "user": "guriosam",
+        "label": {
+            "name": "documentation",
+            "color": "0075ca"
+        },
+        "created_at": "2020-07-11T07:28:58Z",
+        "commit_id": null
+    },
+    {
+        "id": 3536068828,
+        "issue_number": 1,
+        "event": "assigned",
+        "user": "guriosam",
+        "label": {
+            "name": "documentation",
+            "color": "0075ca"
+        },
+        "created_at": "2020-07-11T07:28:54Z",
+        "commit_id": null
+    }
+]

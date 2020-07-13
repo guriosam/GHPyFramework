@@ -1,0 +1,15 @@
+{
+  "tokens": [
+    {
+      "username": "guriosam",
+      "token": "ff09e609b660b1973ebdefbc41ff76090e4b6c84"
+    }
+    ],
+  "projects": [
+    {
+      "owner": "guriosam",
+      "repo": "test_collector"
+    }
+  ],
+  "output_path": "C:/Users/gurio/PycharmProjects/INF2102_Caio_Barbosa_GH_PyFramework/data/"
+}
