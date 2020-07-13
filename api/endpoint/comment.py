@@ -22,11 +22,11 @@ class CommentAPI(APIInterface):
 
     def collect_batch(self, save: bool = True):
         """
-
-        :param save:
-        :type save:
-        :return:
-        :rtype:
+        Collect several groups of 30 elements returned by the API until the pages return an empty JSON
+        :param save: if it should persist the json downloaded on the hard drive
+        :type save: bool
+        :return: list of elements returned by the API
+        :rtype: list
         """
         request_url = self.api_url + self.owner + '/' + self.repo + '/issues/comments?page='
         path = self.path + self.repo + '/comments/issues/all/'
@@ -50,6 +50,13 @@ class CommentAPI(APIInterface):
         return comments
 
     def collect_single(self, issue_number: str):
+        """
+        Collect a single element of the API
+        :param issue_number: parameter that will be used by the function to know which element it should download
+        :type issue_number: str
+        :return: json downloaded
+        :rtype: dict
+        """
         path = self.path + self.repo + '/comments/individual/'
         json = JSONHandler(path)
         page = 1

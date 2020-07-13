@@ -17,11 +17,11 @@ class PrototypeAPI(APIInterface):
 
     def collect_batch(self, save: bool = True):
         """
-
-        :param save:
-        :type save:
-        :return:
-        :rtype:
+        Collect several groups of 30 elements returned by the API until the pages return an empty JSON
+        :param save: if it should persist the json downloaded on the hard drive
+        :type save: bool
+        :return: list of elements returned by the API
+        :rtype: list
         """
         request_url = self.api_url + self.owner + '/' + self.repo + self.private_url + '?page='
         path = self.path + self.repo + self.private_path + 'all/'
@@ -47,6 +47,15 @@ class PrototypeAPI(APIInterface):
         return data_list
 
     def collect_single(self, parameter: str, save: bool = True):
+        """
+        Collect a single element of the API
+        :param parameter: parameter that will be used by the function to know which element it should download
+        :type parameter: str
+        :param save: if it should persist the json downloaded on the hard drive
+        :type save: bool
+        :return: json downloaded
+        :rtype: dict
+        """
         path = self.path + self.repo + self.private_path + 'individual/'
         json = JSONHandler(path)
 

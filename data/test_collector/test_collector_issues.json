@@ -15,7 +15,7 @@
         "closed_at": null,
         "author_association": "OWNER",
         "pull_request": true,
-        "closed_by": null
+        "closed_by": ""
     },
     {
         "id": 655042816,
@@ -33,6 +33,6 @@
         "closed_at": null,
         "author_association": "OWNER",
         "pull_request": true,
-        "closed_by": null
+        "closed_by": ""
     }
 ]

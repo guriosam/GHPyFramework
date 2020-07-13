@@ -28,6 +28,7 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+
 class APICollector(object):
 
     def __init__(self):
@@ -36,74 +37,77 @@ class APICollector(object):
 
     def collect_issues(self, owner: str, project: str):
         """
-
-        :param owner:
-        :type owner:
-        :param project:
-        :type project:
-        :return:
-        :rtype:
+        Collect Issues from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :return: list of issues
+        :rtype: list
         """
         print('Collecting Issues')
         return self.collect_all(project, IssueAPI(owner, project), 'issues', 'number', IssueDAO())
 
     def collect_pulls(self, owner: str, project: str):
         """
-
-        :param owner:
-        :type owner:
-        :param project:
-        :type project:
-        :return:
-        :rtype:
+        Collect Pull Requests from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :return: list of pull requests
+        :rtype: list
         """
         print('Collecting Pulls')
         return self.collect_all(project, PullsAPI(owner, project), 'pulls', 'number', PullRequestDAO())
 
     def collect_commits(self, owner: str, project: str):
         """
-
-        :param owner:
-        :type owner:
-        :param project:
-        :type project:
-        :return:
-        :rtype:
+        Collect Commits from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :return: list of commits
+        :rtype: list
         """
         print('Collecting Commits')
         return self.collect_all(project, CommitAPI(owner, project), 'commits', 'sha', CommitDAO())
 
     def collect_comments(self, owner: str, project: str):
         """
-
-        :param owner:
-        :type owner:
-        :param project:
-        :type project:
+        Collect Comments from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :return: list of comment
+        :rtype: list
         """
         print('Collecting Issues Comments')
         self.collect_all(project, CommentAPI(owner, project), 'comments/issues/', 'issue_url', CommentDAO())
 
     def collect_events(self, owner: str, project: str):
         """
-
-        :param owner:
-        :type owner:
-        :param project:
-        :type project:
-        :return:
-        :rtype:
+        Collect Events from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :return: list of events
+        :rtype: list
         """
         print('Collecting Issues Events')
-        return self.collect_all(project, PrototypeAPI(owner, project, '/events/', '/issues/events'), 'events', 'id', EventDAO())
+        return self.collect_all(project, PrototypeAPI(owner, project, '/events/', '/issues/events'), 'events', 'id',
+                                EventDAO())
 
     def collect_all(self, project: str, collector: APIInterface, folder: str, identifier: str, objectDAO: DAOInterface):
         """
-        :param project:
-        :param collector:
-        :param folder:
-        :param identifier:
-        :param objectDAO:
+        :param project: project name
+        :param collector: the collector to be called
+        :param folder: output folder for the data
+        :param identifier: information to collect the specific data for the api type
+        :param objectDAO: DAO of the object to be collected
         """
         collector.collect_batch()
         mypath = self.config['output_path'] + project + '/' + folder + '/all/'
@@ -140,22 +144,22 @@ class APICollector(object):
 
         return DAOs
 
-    def collect_commits_on_pulls(self, owner: str, repo: str):
+    def collect_commits_on_pulls(self, owner: str, project: str):
         """
-
-        :param owner:
-        :type owner:
-        :param repo:
-        :type repo:
-        :return:
-        :rtype:
+        Collect Commits from Pull Requests from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :return: list of commits from pull requests
+        :rtype: list
         """
         print('Collecting Pull Requests Commits')
 
         pulls = []
-        mypath = self.config['output_path'] + repo + '/pulls/all/'
+        mypath = self.config['output_path'] + project + '/pulls/all/'
         json = JSONHandler(mypath)
-        commits_json = JSONHandler(self.config['output_path'] + repo + '/pulls_commits/commits/')
+        commits_json = JSONHandler(self.config['output_path'] + project + '/pulls_commits/commits/')
         onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
 
         for file in onlyfiles:
@@ -167,7 +171,7 @@ class APICollector(object):
 
         for pull in pulls:
             if JSONHandler.file_exists(
-                    self.config['output_path'] + repo + '/pulls_commits/commits/' + str(pull) + '.json'):
+                    self.config['output_path'] + project + '/pulls_commits/commits/' + str(pull) + '.json'):
                 commits_pull = commits_json.open_json(
                     str(pull) + '.json')
                 for commit_pull in commits_pull:
@@ -175,17 +179,17 @@ class APICollector(object):
                         hashs.append(commit['sha'])
                 continue
 
-            pullsEndpoint = PrototypeAPI(owner, repo, '/pulls_commits/', '/pulls/' + str(pull) + '/commits')
+            pullsEndpoint = PrototypeAPI(owner, project, '/pulls_commits/', '/pulls/' + str(pull) + '/commits')
             files = pullsEndpoint.collect_batch(False)
             commits_json.save_json(files, str(pull))
 
-        commitsEndpoint = PrototypeAPI(owner, repo, '/pulls_commits/', '/commits')
+        commitsEndpoint = PrototypeAPI(owner, project, '/pulls_commits/', '/commits')
         aux = 1
         for hash in hashs:
             if not hash:
                 continue
             commitsEndpoint.collect_single(hash)
-            print(str(aux*100 / len(hashs)) + "%")
+            print(str(aux * 100 / len(hashs)) + "%")
             aux = aux + 1
 
         return hashs

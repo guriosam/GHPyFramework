@@ -18,7 +18,7 @@
         "merged_at": null,
         "author_association": "OWNER",
         "merged": false,
-        "merged_by": null,
+        "merged_by": "",
         "review_comments": 0,
         "commits": 1,
         "additions": 2,

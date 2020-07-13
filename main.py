@@ -1,3 +1,5 @@
+from api.api_collector import APICollector
+from metrics.metrics_collector import MetricsCollector
 from utils.json_handler import JSONHandler
 
 
@@ -8,23 +10,19 @@ class Main:
         self.projects = self.config['projects']
 
         for project in self.projects:
-            self.project_name = project['repo']
-            print(self.project_name)
+            project_name = project['repo']
+            project_owner = project['owner']
 
-            # self.collect_issues(project)
-            # self.collect_pulls(project)
-            # self.collect_commits(project)
-            # self.collect_users(UserAPI(project['owner'], project['repo']), UserDAO())
-            # self.collect_reviews(project)
-            # self.collect_events(project)
+            collector = APICollector()
 
-            # self.collect_commits_on_pulls(project['owner'], project['repo'])
-            # self.compose_commits_on_pulls(project['owner'], project['repo'])
+            collector.collect_issues(project_owner, project_name)
+            collector.collect_pulls(project_owner, project_name)
+            collector.collect_commits(project_owner, project_name)
+            collector.collect_events(project_owner, project_name)
+            collector.collect_comments(project_owner, project_name)
 
-            # self.collect_pulls_of_issues(project)
-
-            # self.run_metrics(project)
-            # self.compile_data(project)
+            metrics_collector = MetricsCollector(self.config['output_path'])
+            metrics_collector.run_metrics()
 
 
 main = Main()

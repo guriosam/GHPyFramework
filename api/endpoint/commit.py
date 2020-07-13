@@ -21,11 +21,11 @@ class CommitAPI(APIInterface):
 
     def collect_batch(self, save : bool = True):
         """
-
-        :param save:
-        :type save:
-        :return:
-        :rtype:
+        Collect several groups of 30 elements returned by the API until the pages return an empty JSON
+        :param save: if it should persist the json downloaded on the hard drive
+        :type save: bool
+        :return: list of elements returned by the API
+        :rtype: list
         """
         page = 1
         commits = []
@@ -51,11 +51,11 @@ class CommitAPI(APIInterface):
 
     def collect_single(self, sha : str):
         """
-
-        :param sha:
-        :type sha:
-        :return:
-        :rtype:
+        Collect a single element of the API
+        :param sha: parameter that will be used by the function to know which element it should download
+        :type sha: str
+        :return: json downloaded
+        :rtype: dict
         """
         json = JSONHandler(self.path + self.repo + '/commits/individual/')
 
