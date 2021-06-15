@@ -1,0 +1,7 @@
+venv
+venv/
+venv/*
+agents/
+agents
+agents/*
+data/*
