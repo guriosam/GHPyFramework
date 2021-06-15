@@ -1,3 +1,7 @@
+import json
+
+from pymongo.database import Database
+
 from api.endpoint.api_interface import APIInterface
 from utils.api_call_handler import APICallHandler
 from utils.json_handler import JSONHandler
@@ -13,12 +17,16 @@ __status__ = "Production"
 class PullsAPI(APIInterface):
     api_url = 'https://api.github.com/repos/'
 
-    def __init__(self, owner, repo):
+    def __init__(self, owner, repo, database: Database):
         super()
         self.owner = owner
         self.repo = repo
-        config = JSONHandler('../').open_json('config.json')
-        self.path = config['output_path']
+
+        self.database = database
+
+        if 'pull_requests' not in database.name:
+            self.database = database['pull_requests']
+
         self.apiHandler = APICallHandler()
 
     def collect_batch(self, save: bool = True):
@@ -32,17 +40,16 @@ class PullsAPI(APIInterface):
         request_url = self.api_url + self.owner + '/' + self.repo + '/pulls?state=all&page='
         page = 1
         pulls = []
-        json = JSONHandler(self.path + self.repo + '/pulls/all/')
+
         while True:
-            if json.file_exists(self.path + self.repo + '/pulls/all/' + str(page) + '.json'):
-                page = page + 1
-                continue
-
             pull_batch = self.apiHandler.request(request_url + str(page))
-
             if pull_batch:
-                json.save_json(pull_batch, str(page))
                 pulls.append(pull_batch)
+
+                for pull in pull_batch:
+                    if self.database.find_one({'number': pull['number']}):
+                        return pulls
+
                 page = page + 1
             else:
                 break
@@ -57,15 +64,18 @@ class PullsAPI(APIInterface):
         :return: json downloaded
         :rtype: dict
         """
-        json = JSONHandler(self.path + self.repo + '/pulls/individual/')
 
-        if json.file_exists(self.path + self.repo + '/pulls/individual/' + str(number) + '.json'):
-            return JSONHandler(self.path + self.repo + '/pulls/individual/').open_json(str(number) + '.json')
+        pull = self.database.find_one({'number': number})
+        if pull:
+            return pull
 
         pull = self.apiHandler.request(self.api_url + self.owner + '/' + self.repo + '/pulls/' + str(number))
         if pull:
-            json.save_json(pull, str(number))
+            pull_json = json.loads(pull)
+            self.database.insert_one(pull_json)
+            return self.database.find_one({'number': number})
         else:
             print('Empty JSON of ' + str(number))
 
         return pull
+

@@ -1,15 +1,35 @@
 {
   "tokens": [
     {
-      "username": "",
-      "token": ""
+      "username": "guriosam",
+      "token": "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"
     }
     ],
   "projects": [
     {
-      "owner": "guriosam",
-      "repo": "test_collector"
+      "owner": "apache",
+      "repo": "dubbo"
+    },
+    {
+      "owner": "facebook",
+      "repo": "fresco"
+    },
+    {
+      "owner": "square",
+      "repo": "okhttp"
+    },
+    {
+      "owner": "prestodb",
+      "repo": "presto"
+    },
+    {
+      "owner": "netty",
+      "repo": "netty"
+    },
+    {
+      "owner": "ReactiveX",
+      "repo": "RxJava"
     }
   ],
-  "output_path": "C:/Users/gurio/PycharmProjects/INF2102_Caio_Barbosa_GH_PyFramework/data/"
+  "output_path": "C:/Users/gurio/research/master/projects/"
 }

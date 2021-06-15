@@ -7,6 +7,8 @@ This class is responsible for running all the api collection methods for the imp
 from os import listdir
 from os.path import isfile, join
 
+from pymongo.database import Database
+
 from api.dao.commentDAO import CommentDAO
 from api.dao.commitDAO import CommitDAO
 from api.dao.dao_interface import DAOInterface
@@ -20,6 +22,7 @@ from api.endpoint.issue import IssueAPI
 from api.endpoint.prototypeAPI import PrototypeAPI
 from api.endpoint.pullrequest import PullsAPI
 from utils.json_handler import JSONHandler
+from pade.acl.messages import ACLMessage, AID
 
 __author__ = "Caio Barbosa"
 __license__ = "GPL"
@@ -31,9 +34,8 @@ __status__ = "Production"
 
 class APICollector(object):
 
-    def __init__(self):
-        self.config = JSONHandler('../').open_json('config.json')
-        self.projects = self.config['projects']
+    def __init__(self, database: Database):
+        self.database = database
 
     def collect_issues(self, owner: str, project: str):
         """
@@ -46,7 +48,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Issues')
-        return self.collect_all(project, IssueAPI(owner, project), 'issues', 'number', IssueDAO())
+        return self.collect_all(project, IssueAPI(owner, project, self.database), 'issues', 'number', IssueDAO())
 
     def collect_pulls(self, owner: str, project: str):
         """
@@ -59,7 +61,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Pulls')
-        return self.collect_all(project, PullsAPI(owner, project), 'pulls', 'number', PullRequestDAO())
+        return self.collect_all(project, PullsAPI(owner, project, self.database), 'pulls', 'number', PullRequestDAO())
 
     def collect_commits(self, owner: str, project: str):
         """
@@ -72,7 +74,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Commits')
-        return self.collect_all(project, CommitAPI(owner, project), 'commits', 'sha', CommitDAO())
+        return self.collect_all(project, CommitAPI(owner, project, self.database), 'commits', 'sha', CommitDAO())
 
     def collect_comments(self, owner: str, project: str):
         """
@@ -85,7 +87,8 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Issues Comments')
-        self.collect_all(project, CommentAPI(owner, project), 'comments/issues/', 'issue_url', CommentDAO())
+        self.collect_all(project, CommentAPI(owner, project, self.database), 'comments/issues/', 'issue_url',
+                         CommentDAO())
 
     def collect_events(self, owner: str, project: str):
         """
@@ -98,7 +101,8 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Issues Events')
-        return self.collect_all(project, PrototypeAPI(owner, project, '/events/', '/issues/events'), 'events', 'id',
+        return self.collect_all(project, PrototypeAPI(owner, project, '/events/', '/issues/events', self.database),
+                                'events', 'id',
                                 EventDAO())
 
     def collect_all(self, project: str, collector: APIInterface, folder: str, identifier: str, objectDAO: DAOInterface):
@@ -109,40 +113,55 @@ class APICollector(object):
         :param identifier: information to collect the specific data for the api type
         :param objectDAO: DAO of the object to be collected
         """
-        collector.collect_batch()
-        mypath = self.config['output_path'] + project + '/' + folder + '/all/'
-        json = JSONHandler(mypath)
-        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+        elements = collector.collect_batch()
+        # mypath = self.config['output_path'] + project + '/' + folder + '/all/'
+        # json = JSONHandler(mypath)
+        # onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
 
         refs = []
-        for file in onlyfiles:
-            json_objects = json.open_json(file)
-            for object in json_objects:
-                if object[identifier] not in refs:
-                    refs.append(object[identifier])
+        for element in elements:
+            for el in element:
+                refs.append(el[identifier])
 
-        DAOs = []
+        # DAOs = []
+
+        flag = False
 
         for ref in refs:
 
             obj = collector.collect_single(ref)
-            try:
-                if type(obj) is list:
-                    for ob in obj:
-                        objectDAO.read_from_json(ob)
-                        DAOs.append(objectDAO.__dict__.copy())
-                else:
-                    objectDAO.read_from_json(obj)
-                    DAOs.append(objectDAO.__dict__.copy())
 
-            except Exception as e:
-                print('Something went wrong in: ' + str(ref) + ' on object ' + str(obj))
-                print(e)
+            if obj:
+                flag = True
+            # try:
+            #    if type(obj) is list:
+            #        for ob in obj:
+            #            objectDAO.read_from_json(ob)
+            #            DAOs.append(objectDAO.__dict__.copy())
+            #    else:
+            #        objectDAO.read_from_json(obj)
+            #        DAOs.append(objectDAO.__dict__.copy())
 
-        json = JSONHandler(self.config['output_path'] + project + '/')
-        json.save_json(DAOs, project + '_' + folder.split('/')[0])
+            # except Exception as e:
+            #    print('Something went wrong in: ' + str(ref) + ' on object ' + str(obj))
+            #    print(e)
 
-        return DAOs
+        if flag:
+            message = ACLMessage(ACLMessage.INFORM)
+            message.set_protocol(ACLMessage.FIPA_REQUEST_PROTOCOL)
+            message.add_receiver(AID('agent_run_tool'))
+            message.set_content({
+                'project': project,
+                'content': folder,
+                'identifier': identifier,
+                'message': 'updates on the database for ' + folder + "!"
+            })
+            
+
+        # json = JSONHandler(self.config['output_path'] + project + '/')
+        # json.save_json(DAOs, project + '_' + folder.split('/')[0])
+
+        # return DAOs
 
     def collect_commits_on_pulls(self, owner: str, project: str):
         """

@@ -7,9 +7,8 @@ class APICallHandler:
 
     def __init__(self):
         self.position = 0
-        self.config = JSONHandler('../').open_json('config.json')
+        self.config = JSONHandler('./').open_json('config.json')
         self.tokens_len = len(self.config['tokens'])
-
         self.username = self.config['tokens'][self.position]['username']
         self.auth_token = self.config['tokens'][self.position]['token']
 

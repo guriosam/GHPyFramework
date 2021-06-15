@@ -1,3 +1,5 @@
+from pymongo.database import Database
+
 from api.endpoint.api_interface import APIInterface
 from utils.api_call_handler import APICallHandler
 from utils.json_handler import JSONHandler
@@ -5,7 +7,7 @@ from utils.json_handler import JSONHandler
 
 class PrototypeAPI(APIInterface):
 
-    def __init__(self, owner: str = '', repo: str = '', private_path: str = '', private_url: str = ''):
+    def __init__(self, owner: str = '', repo: str = '', private_path: str = '', private_url: str = '', database: Database = None):
         self.owner = owner
         self.repo = repo
         self.api_url = 'https://api.github.com/repos/'
@@ -14,6 +16,7 @@ class PrototypeAPI(APIInterface):
         self.apiHandler = APICallHandler()
         self.private_path = private_path
         self.private_url = private_url
+        self.database = database
 
     def collect_batch(self, save: bool = True):
         """

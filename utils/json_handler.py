@@ -25,7 +25,7 @@ class JSONHandler:
             if not os.path.exists(self.path + name):
                 print(self.path + name)
                 return {}
-            with open(self.path + name, encoding='utf-8') as json_file:
+            with open(self.path + name, encoding='utf-8', errors='ignore') as json_file:
                 data = json.load(json_file)
                 return data
         except Exception as e:
