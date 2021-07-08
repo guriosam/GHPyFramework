@@ -64,14 +64,14 @@ class CommitAPI(APIInterface):
 
         commit = self.database.find_one({'sha': sha})
         if commit:
-            return commit
+            return False
 
         commit = self.apiCall.request(self.api_url + self.owner + '/' + self.repo + '/commits/' + sha)
 
         if commit:
             self.database.insert_one(commit)
-            return self.database.find_one({'sha': sha})
+            return True
         else:
             print('Empty JSON of ' + sha)
 
-        return commit
+        return False

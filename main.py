@@ -46,15 +46,15 @@ class Main:
 
             io = IOMongo(database, project_name)
 
-            io.insert_issues()
-            io.insert_pulls()
+            #io.insert_issues()
+            #io.insert_pulls()
 
-            io.insert_events()
-            io.insert_comments()
+            #io.insert_events()
+            #io.insert_comments()
             io.insert_commits()
             io.insert_commits_from_pulls()
 
 
 main = Main()
 #main.run()
-#main.run_io_mongo()
+main.run_io_mongo()

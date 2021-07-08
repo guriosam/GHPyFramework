@@ -9,7 +9,6 @@ from utils.api_call_handler import APICallHandler
 class IssueAPI(APIInterface):
 
     def __init__(self, owner: str, repo: str, database: Database):
-        # config = JSONHandler('../').open_json('config.json')
         self.owner = owner
         self.repo = repo
 
@@ -18,7 +17,6 @@ class IssueAPI(APIInterface):
         if 'issues' not in database.name:
             self.database = database['issues']
 
-        # self.path = config['output_path']
         self.apiHandler = APICallHandler()
         self.api_url = 'https://api.github.com/repos/'
 
@@ -33,7 +31,6 @@ class IssueAPI(APIInterface):
         request_url = self.api_url + self.owner + '/' + self.repo + '/issues?state=all&page='
         page = 1
         issues = []
-        # json = JSONHandler(self.path + self.repo + '/issues/all/')
         while True:
             issue_batch = self.apiHandler.request(request_url + str(page))
             if issue_batch:
@@ -57,17 +54,15 @@ class IssueAPI(APIInterface):
         """
 
         number = int(number)
-        #json = JSONHandler(self.path + self.repo + '/issues/individual/')
         issue = self.database.find_one({'number': number})
         if issue:
-            return issue
+            return False
 
         issue = self.apiHandler.request(self.api_url + self.owner + '/' + self.repo + '/issues/' + str(number))
         if issue:
-            #issue_json = json.dumps(issue)
             self.database.insert_one(issue)
-            return self.database.find_one({'number': number})
+            return True
         else:
             print('Empty JSON of ' + str(number))
 
-        return issue
+        return False

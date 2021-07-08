@@ -1,3 +1,5 @@
+from pymongo.database import Database
+
 from utils.csv_handler import CSVHandler
 from utils.date import DateUtils
 from utils.json_handler import JSONHandler
@@ -9,12 +11,11 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+
 class DiscussionLength:
 
-    def __init__(self, project: str):
-        config = JSONHandler('../').open_json('config.json')
-        self.project = project
-        self.path = config['output_path']
+    def __init__(self, database: Database):
+        self.database = database
 
     def get_time_in_days_between_open_and_close(self):
         """
@@ -24,10 +25,8 @@ class DiscussionLength:
         """
         print('#### Discussion Length ####')
 
-        path = self.path + '/' + self.project
-        json = JSONHandler(path + '/')
-        issues = json.open_json(self.project + '_issues.json')
-        pulls = json.open_json(self.project + '_pulls.json')
+        issues = self.database['issues'].find({'state': 'closed'})
+        pulls = self.database['pull_requests'].find({'state': 'merged'})
 
         days_between = [['number', 'status']]
 
@@ -38,8 +37,8 @@ class DiscussionLength:
             if 'closed' in issue['state']:
                 days = date_utils.get_days_between_dates(issue['created_at'], issue['closed_at'])
                 # print(issue['author_association'])
-                days_between.append(
-                    [issue['issue_number'], days])
+                self.database['metrics'].insert_one(
+                    {'pull_request_id': issue['number'], 'days_between_open_and_close': days})
 
         for pull in pulls:
             days = 0
@@ -49,12 +48,8 @@ class DiscussionLength:
                 else:
                     days = date_utils.get_days_between_dates(pull['created_at'], pull['closed_at'])
 
-                days_between.append(
-                    [pull['pull_request_number'], days])
+                self.database['metrics'].insert_one(
+                    {'pull_request_id': pull['number'], 'days_between_open_and_close': days})
 
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_discussion_length.csv',
-                      days_between)
 
-        return days_between
+        return self.database['metrics'].find({'days_between_open_and_close': {'$ne': None}})

@@ -4,6 +4,8 @@ import json
 from api.api_collector import APICollector
 from database_manager.io_mongo import IOMongo
 from metrics.metrics_collector import MetricsCollector
+from metrics.number_of_modified_files import NumberModifiedFiles
+from utils.csv_handler import CSVHandler
 from utils.json_handler import JSONHandler
 import pymongo
 
@@ -18,7 +20,7 @@ class Main:
         self.projects = self.config['projects']
 
     def collect_data_daniel(self):
-        myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+
 
         self.commits_limit = {
             "dubbo": "b288ad7e3812d2354e54aa2f20f8127f24586a5e",
@@ -28,6 +30,9 @@ class Main:
             "presto": "951c5653da4d3b7fb9c925f123d264a93daaba9d",
             "okhttp": "6a8f479134a3976ad1a30169e6ab0d3a1b4c65c6"
         }
+
+        myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+        output = [['project', 'email', 'name', 'commits_as_author', 'commits_as_committer']]
 
         for project in self.projects:
             project_name = project['repo']
@@ -54,7 +59,6 @@ class Main:
             with open(project_name + '_comments.json', 'w', encoding='utf8') as outfile:
                 json.dump(comments_per_issue, outfile, indent=4)
                 print(project_name + ' saved.')
-
 
     def _get_commit_issues_prs(self, database, project_name):
 
@@ -100,3 +104,52 @@ class Main:
             print(project_name + ' saved.')
 
         return issues_prs
+
+    def get_authors_info(self):
+
+        myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+        output = [['project', 'email', 'name', 'commits_as_author', 'commits_as_committer']]
+
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = myclient[project_owner + '-' + project_name]
+
+            result = database['commits'].aggregate([
+                {
+                    '$match': {
+                        'commit.committer.date': {
+                            '$gte': '2019-06-01T00:00:01Z'
+                        }
+                    }
+                }, {
+                    '$group': {
+                        '_id': 1,
+                        'list': {
+                            '$addToSet': '$commit.author.email'
+                        }
+                    }
+                }
+            ])
+
+            for resul in result:
+                print(project_name)
+                for el in resul['list']:
+                    if 'bot' in el:
+                        continue
+                    if 'reply' in el:
+                        continue
+                    if '@' in el:
+                        commit = database['commits'].find_one({'commit.author.email': el})
+                        commits_as_author = database['commits'].find({'commit.author.email': el}).count()
+                        commits_as_committer = database['commits'].find({'commit.committer.email': el}).count()
+                        if commit:
+                            output.append([project_name, el, commit['commit']['author']['name'], commits_as_author,
+                                           commits_as_committer])
+
+            csv = CSVHandler()
+            csv.write_csv('./', 'all_emails2.csv', output)
+
+
+Main().get_authors_info()

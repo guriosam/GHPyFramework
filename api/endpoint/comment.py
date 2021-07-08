@@ -39,20 +39,29 @@ class CommentAPI(APIInterface):
         """
         request_url = self.api_url + self.owner + '/' + self.repo + '/issues/comments?page='
         page = 1
-        comments = []
+        new_comments = True
+
+        comments_size = self.database.find({}).count()
+
         while True:
             comment_batch = self.apiHandler.request(request_url + str(page))
+
             if not comment_batch:
                 break
-            comments.append(comment_batch)
 
             for comment in comment_batch:
                 if self.database.find_one({'id': comment['id']}):
-                    return comments
+                    break
 
-            page = page + 1
+                comment['issue_number'] = int(comment['issue_url'].split('issues/')[1])
+                self.database.insert_one(comment)
 
-        return comments
+            page += 1
+
+        return comments_size < self.database.find({}).count()
+
+
+
 
     def collect_single(self, issue_number: str):
         """
