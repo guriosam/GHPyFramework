@@ -11,8 +11,9 @@ class Main:
 
     def __init__(self):
 
+
+        json_handler = JSONHandler('./')
         self.config = json_handler.open_json('config.json')
-        json_handler = JSONHandler(self.config['output_path'])
         self.projects = self.config['projects']
 
     def run(self):
