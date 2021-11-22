@@ -1,35 +1,15 @@
 {
   "tokens": [
     {
-      "username": "guriosam",
-      "token": "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"
+      "username": "your_username",
+      "token": "your_token"
     }
     ],
   "projects": [
     {
-      "owner": "apache",
-      "repo": "dubbo"
-    },
-    {
-      "owner": "facebook",
-      "repo": "fresco"
-    },
-    {
-      "owner": "square",
-      "repo": "okhttp"
-    },
-    {
-      "owner": "prestodb",
-      "repo": "presto"
-    },
-    {
-      "owner": "netty",
-      "repo": "netty"
-    },
-    {
-      "owner": "ReactiveX",
-      "repo": "RxJava"
+      "owner": "project_owner",
+      "repo": "repository_name"
     }
   ],
-  "output_path": "C:/Users/gurio/research/master/projects/"
+  "output_path": "your_output_path"
 }

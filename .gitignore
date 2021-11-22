@@ -5,3 +5,5 @@ agents/
 agents
 agents/*
 data/*
+.idea
+data
