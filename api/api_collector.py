@@ -22,7 +22,6 @@ from api.endpoint.issue import IssueAPI
 from api.endpoint.prototypeAPI import PrototypeAPI
 from api.endpoint.pullrequest import PullsAPI
 from utils.json_handler import JSONHandler
-from pade.acl.messages import ACLMessage, AID
 
 __author__ = "Caio Barbosa"
 __license__ = "GPL"
@@ -90,20 +89,20 @@ class APICollector(object):
         self.collect_all(project, CommentAPI(owner, project, self.database), 'comments/issues/', 'issue_url',
                          CommentDAO())
 
-    def collect_events(self, owner: str, project: str):
-        """
-        Collect Events from the GitHub API
-        :param owner: repository owner
-        :type owner: str
-        :param project: project name
-        :type project: str
-        :return: list of events
-        :rtype: list
-        """
-        print('Collecting Issues Events')
-        return self.collect_all(project, PrototypeAPI(owner, project, '/events/', '/issues/events', self.database),
-                                'events', 'id',
-                                EventDAO())
+    # def collect_events(self, owner: str, project: str):
+    #     """
+    #     Collect Events from the GitHub API
+    #     :param owner: repository owner
+    #     :type owner: str
+    #     :param project: project name
+    #     :type project: str
+    #     :return: list of events
+    #     :rtype: list
+    #     """
+    #     print('Collecting Issues Events')
+    #     return self.collect_all(project, PrototypeAPI(owner, project, '/events/', '/issues/events', self.database),
+    #                             'events', 'id',
+    #                             EventDAO())
 
     def collect_all(self, project: str, collector: APIInterface, folder: str, identifier: str, objectDAO: DAOInterface):
         """
@@ -146,17 +145,17 @@ class APICollector(object):
             #    print('Something went wrong in: ' + str(ref) + ' on object ' + str(obj))
             #    print(e)
 
-        if flag:
-            message = ACLMessage(ACLMessage.INFORM)
-            message.set_protocol(ACLMessage.FIPA_REQUEST_PROTOCOL)
-            message.add_receiver(AID('agent_run_tool'))
-            message.set_content({
-                'project': project,
-                'content': folder,
-                'identifier': identifier,
-                'message': 'updates on the database for ' + folder + "!"
-            })
-            
+        # if flag:
+        #     message = ACLMessage(ACLMessage.INFORM)
+        #     message.set_protocol(ACLMessage.FIPA_REQUEST_PROTOCOL)
+        #     message.add_receiver(AID('agent_run_tool'))
+        #     message.set_content({
+        #         'project': project,
+        #         'content': folder,
+        #         'identifier': identifier,
+        #         'message': 'updates on the database for ' + folder + "!"
+        #     })
+        #
 
         # json = JSONHandler(self.config['output_path'] + project + '/')
         # json.save_json(DAOs, project + '_' + folder.split('/')[0])

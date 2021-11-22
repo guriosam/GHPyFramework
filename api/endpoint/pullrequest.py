@@ -22,6 +22,7 @@ class PullsAPI(APIInterface):
         self.owner = owner
         self.repo = repo
 
+        self.root_database = database
         self.database = database
 
         if 'pull_requests' not in database.name:
@@ -66,13 +67,18 @@ class PullsAPI(APIInterface):
         """
 
         pull = self.database.find_one({'number': number})
+
+        issue = self.root_database['issues'].find_one({'number': number})
+
+        if issue:
+            self.root_database['issues'].remove({'number': number})
+
         if pull:
             return pull
 
         pull = self.apiHandler.request(self.api_url + self.owner + '/' + self.repo + '/pulls/' + str(number))
         if pull:
-            pull_json = json.loads(pull)
-            self.database.insert_one(pull_json)
+            self.database.insert_one(pull)
             return self.database.find_one({'number': number})
         else:
             print('Empty JSON of ' + str(number))

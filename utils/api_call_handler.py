@@ -7,7 +7,7 @@ class APICallHandler:
 
     def __init__(self):
         self.position = 0
-        self.config = JSONHandler('./').open_json('config.json')
+        self.config = JSONHandler('./').open_json('config_dev.json')
         self.tokens_len = len(self.config['tokens'])
         self.username = self.config['tokens'][self.position]['username']
         self.auth_token = self.config['tokens'][self.position]['token']
@@ -25,6 +25,7 @@ class APICallHandler:
                     self.position = self.position + 1
                     if self.position == self.tokens_len:
                         self.position = 0
+                    print("Your limit for this account reached the maximum. Add a new account to config_dev.json or wait 60 minutes for the limit to be freed.")
                 else:
                     if 'page' in request_url:
                         print(request.status_code)

@@ -1,23 +1,18 @@
-import json
+from pymongo import MongoClient
 
 from api.api_collector import APICollector
-from database_manager.io_mongo import IOMongo
-from metrics.metrics_collector import MetricsCollector
 from utils.json_handler import JSONHandler
-import pymongo
 
 
 class Main:
 
     def __init__(self):
-
-
         json_handler = JSONHandler('./')
-        self.config = json_handler.open_json('config.json')
+        self.config = json_handler.open_json('config_dev.json')
         self.projects = self.config['projects']
 
     def run(self):
-        myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+        myclient = MongoClient("mongodb://localhost:27017/")
 
         for project in self.projects:
             project_name = project['repo']
@@ -27,10 +22,9 @@ class Main:
 
             collector = APICollector(database)
 
-            collector.collect_issues(project_owner, project_name)
-            collector.collect_pulls(project_owner, project_name)
-            collector.collect_commits(project_owner, project_name)
-            collector.collect_events(project_owner, project_name)
+            #collector.collect_issues(project_owner, project_name)
+            #collector.collect_pulls(project_owner, project_name)
+            #collector.collect_commits(project_owner, project_name)
             collector.collect_comments(project_owner, project_name)
 
     # def run_io_mongo(self):
