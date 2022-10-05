@@ -4,9 +4,9 @@ This class is responsible for running the metrics implemented and compile the da
 """
 
 from metrics.implementation.developer_status import DeveloperStatus
-from metrics.implementation.discussion_length import DiscussionLength
+from metrics.implementation.discussion_duration import DiscussionLength
 from metrics.implementation.mean_time_between_replies import TimeBetweenReplies
-from metrics.implementation.median_number_of_comments import NumberComments
+from metrics.implementation.developers_number_of import NumberComments
 from metrics.implementation.number_of_patches import NumberSnippets
 from metrics.implementation.opened_employment import OpenedByEmployeeOrTemporary
 from metrics.implementation.words_in_discussion import WordsInDiscussion

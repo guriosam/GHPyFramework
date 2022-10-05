@@ -30,7 +30,7 @@ class PullsAPI(APIInterface):
 
         self.apiHandler = APICallHandler()
 
-    def collect_batch(self, save: bool = True):
+    def collect_batch(self, review: bool = False, save: bool = True):
         """
         Collect several groups of 30 elements returned by the API until the pages return an empty JSON
         :param save: if it should persist the json downloaded on the hard drive
@@ -49,7 +49,7 @@ class PullsAPI(APIInterface):
 
                 for pull in pull_batch:
                     if self.database.find_one({'number': pull['number']}):
-                        return pulls
+                        continue
 
                 page = page + 1
             else:
@@ -66,6 +66,9 @@ class PullsAPI(APIInterface):
         :rtype: dict
         """
 
+
+        print("******* Pull request number " + str(number) + " *********")
+
         pull = self.database.find_one({'number': number})
 
         issue = self.root_database['issues'].find_one({'number': number})
@@ -74,11 +77,13 @@ class PullsAPI(APIInterface):
             self.root_database['issues'].remove({'number': number})
 
         if pull:
+            print('PR ' + str(number) + ' already in the database')
             return pull
 
         pull = self.apiHandler.request(self.api_url + self.owner + '/' + self.repo + '/pulls/' + str(number))
         if pull:
             self.database.insert_one(pull)
+            print('PR ' + str(number) + ' saved')
             return self.database.find_one({'number': number})
         else:
             print('Empty JSON of ' + str(number))

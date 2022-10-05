@@ -9,8 +9,21 @@ class DateUtils:
         diff_days = d2 - d1
         return diff_days.days
 
-    def sort_dates(self, dates):
+    @staticmethod
+    def sort_dates(dates):
         return sorted(dates)
+
+
+    @staticmethod
+    def days_between_date_and_now(date):
+        now = datetime.datetime.utcnow()
+        date = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+        result = now - date
+        return result.days
+
+
+
+
 
 
 

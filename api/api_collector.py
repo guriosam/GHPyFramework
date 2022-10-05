@@ -47,7 +47,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Issues')
-        return self.collect_all(project, IssueAPI(owner, project, self.database), 'issues', 'number', IssueDAO())
+        return self.collect_all(project, IssueAPI(owner, project, self.database), 'number')
 
     def collect_pulls(self, owner: str, project: str):
         """
@@ -60,7 +60,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Pulls')
-        return self.collect_all(project, PullsAPI(owner, project, self.database), 'pulls', 'number', PullRequestDAO())
+        return self.collect_all(project, PullsAPI(owner, project, self.database), 'number')
 
     def collect_commits(self, owner: str, project: str):
         """
@@ -73,7 +73,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Commits')
-        return self.collect_all(project, CommitAPI(owner, project, self.database), 'commits', 'sha', CommitDAO())
+        return self.collect_all(project, CommitAPI(owner, project, self.database), 'sha')
 
     def collect_comments(self, owner: str, project: str):
         """
@@ -86,8 +86,7 @@ class APICollector(object):
         :rtype: list
         """
         print('Collecting Issues Comments')
-        self.collect_all(project, CommentAPI(owner, project, self.database), 'comments/issues/', 'issue_url',
-                         CommentDAO())
+        self.collect_all(project, CommentAPI(owner, project, self.database), 'issue_url')
 
     # def collect_events(self, owner: str, project: str):
     #     """
@@ -104,34 +103,47 @@ class APICollector(object):
     #                             'events', 'id',
     #                             EventDAO())
 
-    def collect_all(self, project: str, collector: APIInterface, folder: str, identifier: str, objectDAO: DAOInterface):
+    def collect_all(self, project: str, collector: APIInterface, identifier: str):
         """
         :param project: project name
         :param collector: the collector to be called
         :param folder: output folder for the data
         :param identifier: information to collect the specific data for the api type
-        :param objectDAO: DAO of the object to be collected
         """
-        elements = collector.collect_batch()
+
+        if 'review_comments_url' in identifier:
+            elements = collector.collect_batch(review = True)
+            return
+        else:
+            elements = collector.collect_batch()
+
+
+
         # mypath = self.config['output_path'] + project + '/' + folder + '/all/'
         # json = JSONHandler(mypath)
         # onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
 
         refs = []
-        for element in elements:
-            for el in element:
-                refs.append(el[identifier])
+        flag = False
+
+        if elements:
+            for element in elements:
+                for el in element:
+                    refs.append(el[identifier])
+            flag = True
 
         # DAOs = []
 
-        flag = False
+        if flag:
+            for ref in refs:
 
-        for ref in refs:
+                obj = collector.collect_single(ref)
+        else:
+            collector.collect_batch()
 
-            obj = collector.collect_single(ref)
 
-            if obj:
-                flag = True
+            #if obj:
+            #    flag = True
             # try:
             #    if type(obj) is list:
             #        for ob in obj:
@@ -211,3 +223,7 @@ class APICollector(object):
             aux = aux + 1
 
         return hashs
+
+    def collect_comments_pulls(self, owner: str, project: str):
+        print('Collecting Pulls Comments')
+        self.collect_all(project, CommentAPI(owner, project, self.database), 'review_comments_url')

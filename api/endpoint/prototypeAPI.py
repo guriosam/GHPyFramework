@@ -18,9 +18,10 @@ class PrototypeAPI(APIInterface):
         self.private_url = private_url
         self.database = database
 
-    def collect_batch(self, save: bool = True):
+    def collect_batch(self, review: bool = False, save: bool = True):
         """
         Collect several groups of 30 elements returned by the API until the pages return an empty JSON
+        :param review:
         :param save: if it should persist the json downloaded on the hard drive
         :type save: bool
         :return: list of elements returned by the API

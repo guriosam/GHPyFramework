@@ -1,5 +1,8 @@
+import re
 from os import listdir
 from os.path import isfile, join
+
+from pymongo.database import Database
 
 from utils.csv_handler import CSVHandler
 from utils.json_handler import JSONHandler
@@ -13,86 +16,84 @@ __status__ = "Production"
 
 class NumberSnippets:
 
-    def __init__(self, project: str):
-        config = JSONHandler('../').open_json('config.json')
-        self.project = project
-        self.path = config['output_path']
-        self.patches_size = {}
+    def __init__(self, owner: str, repo: str, database: Database = None):
+        self.owner = owner
+        self.repo = repo
+        self.database = database
 
-    def get_number_of_patches(self):
+    def get_snippet_metrics(self):
         """
-        Collects the number of snippets inside each comment of issues and pull requests.
+        Collects the number, mean_size and size of snippets inside each comment of issues and pull requests.
 
         :return: list of the number of snippets per issue or pull request
         :rtype: list
         """
         print('#### Number of Snippets ####')
 
-        mypath = self.path + self.project + '/comments/individual/'
-        json = JSONHandler(mypath)
+        database_comments = self.database['comments']
 
-        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+        comments = database_comments.find({'number_patches': {'$exists': False}})
 
-        patches_in_discussion = {}
-        for file in onlyfiles:
-            comments = json.open_json(file)
-            for comment in comments:
-                if 'issue_url' in comment.keys():
-                    issue = comment['issue_url'].split('/')
-                    issue = issue[len(issue) - 1]
+        for comment in comments:
+            patches = re.findall(r'```', comment['body'])
 
-                    if issue not in patches_in_discussion.keys():
-                        patches_in_discussion[issue] = 0
+            if not patches:
+                continue
 
-                    if '```' in comment['body']:
-                        patches = comment['body'].split('```')
-                        count = 0
-                        aux = 0
-                        if issue not in self.patches_size.keys():
-                            self.patches_size[issue] = 0
-                        for patch in patches:
+            number_patches = len(patches)/2
 
-                            if len(patches) != 1:
-                                aux += 1
-                                if aux%2 != 0:
-                                    continue
+            patch_size = 0
 
-                            self.patches_size[issue] += len(patch)
+            patch_content = comment['body'].split('```')
 
-                            count += 1
-                        patches_in_discussion[issue] += count
+            count = 1
+            for patch in patch_content:
+                if count % 2 == 0:
+                    patch_size += len(patch.trim())
+                count += 1
 
+            patch_content_len = len(patch_content)
+            if patch_content_len == 0:
+                patch_content_len = 1
 
-        number_of_patches_in_discussion = [['issue', 'number_patches']]
+            mean_snippet = patch_size / (patch_content_len/2)
 
-        for key in patches_in_discussion.keys():
-            number_of_patches_in_discussion.append([key, patches_in_discussion[key]])
+            database_comments.update_one({'id': comment['id']},
+                                         {'$set': {'number_snippets': number_patches,
+                                          'snippets_size': patch_size,
+                                          'mean_snippets': mean_snippet}})
 
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_patches_in_discussion.csv',
-                      number_of_patches_in_discussion)
+        comments = database_comments.aggregate([
+            {
+                '$group': {
+                    '_id': '$issue_number',
+                    'comments': {
+                        '$push': {
+                            'number_snippets': '$number_snippets',
+                            'snippets_size': '$snippets_size',
+                            'mean_snippets': '$mean_snippets'
+                        }
+                    }
+                }
+            }
+        ])
 
-        return number_of_patches_in_discussion
+        for comment in comments:
+            issue_number = comment['_id']
 
-    def get_patch_size(self):
-        """
-        Collects the size of the snippets of each comment in issues and pull requests.
+            number_snippets = 0
+            snippets_size = 0
+            mean_snippets = 0
+            for snippets in comment['comments']:
+                number_snippets += snippets['number_snippets']
+                snippets_size += snippets['snippets_size']
+                mean_snippets += snippets['mean_snippets']
 
-        :return: list with the sizes of the patches per issue and pull request
-        :rtype: list
-        """
-        print('#### Snippets Size ####')
+            if not self.database['pull_requests'].find_one({'number': issue_number}):
+                self.database['pull_requests'].insert_one({'number': issue_number})
 
-        size_of_patches_in_discussion = [['issue', 'size_patches']]
+            self.database['pull_requests'].update_one({'number': issue_number}, {'$set':
+                                        {'number_snippets': number_snippets,
+                                          'snippets_size': snippets_size,
+                                          'mean_snippets': mean_snippets}})
 
-        for key in self.patches_size.keys():
-            #print(str(key) + ': ' + str(self.patches_size[key]))
-            size_of_patches_in_discussion.append([key, self.patches_size[key]])
-
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_patches_size_in_discussion.csv',
-                      size_of_patches_in_discussion)
-
-        return size_of_patches_in_discussion

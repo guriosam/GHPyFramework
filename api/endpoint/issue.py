@@ -22,7 +22,7 @@ class IssueAPI(APIInterface):
         self.apiHandler = APICallHandler()
         self.api_url = 'https://api.github.com/repos/'
 
-    def collect_batch(self, save: bool = False):
+    def collect_batch(self, review: bool = False, save: bool = False):
         """
         Collect several groups of 30 elements returned by the API until the pages return an empty JSON
         :param save: if it should persist the json downloaded on the hard drive

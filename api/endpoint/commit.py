@@ -28,7 +28,7 @@ class CommitAPI(APIInterface):
         self.api_url = 'https://api.github.com/repos/'
         self.apiCall = APICallHandler()
 
-    def collect_batch(self, save: bool = True):
+    def collect_batch(self, review: bool = False, save: bool = True):
         """
         Collect several groups of 30 elements returned by the API until the pages return an empty JSON
         :param save: if it should persist the json downloaded on the hard drive
@@ -47,7 +47,7 @@ class CommitAPI(APIInterface):
             commits.append(commit_batch)
             for commit in commit_batch:
                 if self.database.find_one({'sha': commit['sha']}):
-                    return commits
+                    continue
 
             page = page + 1
 
@@ -62,14 +62,18 @@ class CommitAPI(APIInterface):
         :rtype: dict
         """
 
+        print("******* Commit hash " + str(sha) + " *********")
+
         commit = self.database.find_one({'sha': sha})
         if commit:
+            print('Commit ' + str(sha) + ' already in the database')
             return commit
 
         commit = self.apiCall.request(self.api_url + self.owner + '/' + self.repo + '/commits/' + sha)
 
         if commit:
             self.database.insert_one(commit)
+            print('Commit ' + str(sha) + ' saved')
             return self.database.find_one({'sha': sha})
         else:
             print('Empty JSON of ' + sha)

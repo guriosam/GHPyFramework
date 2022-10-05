@@ -11,7 +11,7 @@ __status__ = "Production"
 
 class APIInterface(object):
 
-    def collect_batch(self, save: bool = True):
+    def collect_batch(self, review: bool = False, save: bool = True):
         pass
 
     def collect_single(self, parameter: str):

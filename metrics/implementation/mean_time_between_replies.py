@@ -1,6 +1,8 @@
 from os import listdir
 from os.path import isfile, join
 
+from pymongo.database import Database
+
 from utils.csv_handler import CSVHandler
 from utils.json_handler import JSONHandler
 from utils.date import DateUtils
@@ -12,65 +14,161 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+from utils.text_cleaning import TextCleaner
+
+
 class TimeBetweenReplies:
 
-    def __init__(self, project: str):
-        config = JSONHandler('../').open_json('config.json')
-        self.project = project
-        self.path = config['output_path']
+    def __init__(self, owner: str, repo: str, database: Database = None):
+        self.owner = owner
+        self.repo = repo
+        self.database = database
+
 
     def mean_time_between_replies(self):
         """
         Collect the mean time between comments inside an issue or pull request
-        :return: list if mean time between comments per issue/pull request
-        :rtype: list
         """
         print('#### Mean Time Between Comments ####')
 
-        mypath = self.path + self.project + '/comments/individual/'
-        json = JSONHandler(mypath)
-        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+        database = self.database['comments']
+        database_metrics = self.database['metrics']
+        database_pulls = self.database['pull_requests']
 
-        comments_per_issue = {}
+        comments_by_issue = database.aggregate([{
+                '$group': {
+                    '_id': '$issue_number',
+                    'comments': {
+                        '$addToSet': {
+                            'body': '$body',
+                            'created_at': '$created_at'
+                        }
+                    }
+                }
+            },{
+                '$sort': {
+                    'created_at': -1
+                }
+            }
+        ])
 
-        for file in onlyfiles:
-            comments = json.open_json(file)
+        for comments_obj in comments_by_issue:
+            issue_number = comments_obj['_id']
 
+            comments = comments_obj['comments']
+
+
+            total = 0
+            delta = 0
+            for i in range(0, len(comments) - 1):
+                delta = DateUtils().get_days_between_dates(comments[i]['created_at'], comments[i+1]['created_at'])
+
+                if delta < 0:
+                    delta = delta * -1
+                total += delta
+
+            mean_comments = 0
+
+            if len(comments) > 0:
+                mean_comments = total/len(comments)
+
+
+            total_words = 0
+            cleaning = TextCleaner()
             for comment in comments:
-                issue = comment['issue_url'].split('/')
-                issue = issue[len(issue) - 1]
+                body = comment['body']
+                body = cleaning.clean(body)
+                total_words += len(body)
 
-                if issue not in comments_per_issue.keys():
-                    comments_per_issue[issue] = []
+            mean_words = 0
+            if len(comments) > 0:
+                mean_words = total_words/len(comments)
 
-                comments_per_issue[issue].append(comment['created_at'])
+            if database_pulls.find_one({"number": issue_number}):
+                database_pulls.update_one({"number": issue_number},
+                                          {'$set':
+                                               {'mean_time_between_comments': mean_comments,
+                                                'mean_number_of_words': mean_words,
+                                                'number_of_words': total_words}})
+            else:
+                database_pulls.insert_one({"number": issue_number,
+                                           'mean_time_between_comments': mean_comments, 'mean_number_of_words': mean_words,
+                                           'number_of_words': total_words})
 
-        date_utils = DateUtils()
-        mean_time = [['issue', 'mean_time']]
-        for key in comments_per_issue.keys():
-            days_between = []
-            sorted_dates = date_utils.sort_dates(comments_per_issue[key])
-            aux = None
-            for date in sorted_dates:
-                if not aux:
-                    aux = date
-                    continue
+            if database_metrics.find_one({"issue_number": issue_number}):
+                database_metrics.update_one({"issue_number": issue_number},
+                                          {'$set':
+                                               {'mean_time_between_comments': mean_comments,
+                                                'mean_number_of_words': mean_words,
+                                                'number_of_words': total_words}})
+            else:
+                database_metrics.insert_one({"issue_number": issue_number,
+                                           'mean_time_between_comments': mean_comments, 'mean_number_of_words': mean_words,
+                                           'number_of_words': total_words})
 
-                days = date_utils.get_days_between_dates(aux, date)
-                days_between.append(days)
-                aux = date
 
-            length = len(days_between)
+    def mean_time_between_open_and_first_last_and_merge(self):
+        """
+        Collect the mean time between ------ inside an issue or pull request
+        """
+        print('#### Mean Time Between Open and First Comment ####')
 
-            length += 1
+        database = self.database['comments']
+        database_metrics = self.database['metrics']
+        database_pulls = self.database['pull_requests']
 
-            sum_days = sum(days_between)
-            mean_days = sum_days / length
-            mean_time.append([key, mean_days])
+        comments_by_issue = database.aggregate([{
+                '$group': {
+                    '_id': '$issue_number',
+                    'comments': {
+                        '$addToSet': {
+                            'body': '$body',
+                            'created_at': '$created_at'
+                        }
+                    }
+                }
+            },{
+                '$sort': {
+                    'created_at': -1
+                }
+            }
+        ])
 
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_mean_time_between_replies.csv',
-                      mean_time)
+        for comments_obj in comments_by_issue:
+            issue_number = comments_obj['_id']
 
-        return mean_time
+            pull = database_pulls.find_one({'number': issue_number})
+
+            comments = comments_obj['comments']
+
+            if not comments:
+                continue
+
+            first_comment = comments[0]
+
+            last_comment = comments[-1]
+
+
+            delta_first = DateUtils().get_days_between_dates(pull['created_at'], first_comment['created_at'])
+
+            if delta_first < 0:
+                delta_first = delta_first * -1
+
+            merge = pull['merged_at']
+            if not merge:
+                merge = last_comment['created_at']
+            delta_last = DateUtils().get_days_between_dates(last_comment['created_at'], merge)
+
+            if delta_last < 0:
+                delta_last = delta_last * -1
+
+
+            if not database_metrics.find_one({'issue_number': issue_number}):
+                database_metrics.insert_one({'issue_number': issue_number})
+
+            database_metrics.update_one({'issue_number': issue_number}, {'$set':
+                                                                             {
+                                                                                'open_and_first': delta_first,
+                                                                                'last_and_close': delta_last}
+                                                                        })
+

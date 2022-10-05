@@ -1,1 +1,6 @@
 pymongo==3.11.3
+pip~=21.1.2
+pandas~=1.4.3
+scipy~=1.9.0
+networkx~=2.8.6
+matplotlib~=3.6.0

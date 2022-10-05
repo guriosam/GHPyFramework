@@ -1,7 +1,4 @@
-from os import listdir
-from os.path import isfile, join
-from utils.csv_handler import CSVHandler
-from utils.json_handler import JSONHandler
+from pymongo.database import Database
 
 __author__ = "Caio Barbosa"
 __license__ = "GPL"
@@ -10,150 +7,295 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+from utils.date import DateUtils
+
+
 class DeveloperStatus:
 
-    def __init__(self, project):
-        config = JSONHandler('../').open_json('config.json')
-        self.project = project
-        self.path = config['output_path']
-        self.users_comments = self._get_users_labels_in_comments()
-        self.users_issues = self._get_users_labels_in_issues_and_pulls()
+    def __init__(self, owner: str, repo: str, database: Database = None):
+        self.owner = owner
+        self.repo = repo
+        self.database = database
 
-    def number_of_users(self):
+    def user_profiling(self):
         """
         Collect the amount of users with author_association equals to NONE, FIRST_TIMER and FIRST_TIME_CONTRIBUTOR on the comments
-        :return: list of amount of users with author_association equal to NONE, FIRST_TIMER and FIRST_TIME_CONTRIBUTOR per issue/pull request
-        :rtype: list
         """
-        print("#### Number of Users ####")
+        print("#### User Profiling ####")
 
-        users = [['id', 'count']]
-        for k in self.users_comments.keys():
-            count = 0
-            if k in self.users_comments.keys():
-                for association in self.users_comments[k]:
-                    if association == 'NONE' or association == 'FIRST_TIMER' or association == 'FIRST_TIME_CONTRIBUTOR':
-                        count += 1
-            if k in self.users_issues.keys():
-                for association in self.users_issues[k]:
-                    if association == 'NONE' or association == 'FIRST_TIMER' or association == 'FIRST_TIME_CONTRIBUTOR':
-                        count += 1
-            users.append([k, count])
+        database = self.database['comments']
+        database_users = self.database['users']
+        database_metrics = self.database['metrics']
+        database_pulls = self.database['pull_requests']
 
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_number_of_users.csv',
-                      users)
+        comments = database.find({})
 
-        return users
+        type_users = {}
+        for comment in comments:
+            issue_number = comment['issue_number']
 
-    def number_of_contributors(self):
-        """
-        Collect the amount of users with author_association equals to CONTRIBUTOR and COLLABORATOR on the comments
-        :return: list of amount of users with author_association equal to CONTRIBUTOR and COLLABORATOR per issue/pull request
-        :rtype: list
-        """
-        print("#### Number of Contributors ####")
+            if issue_number not in type_users.keys():
+                type_users[issue_number] = {}
+                type_users[issue_number]['newbies'] = set()
+                type_users[issue_number]['contributors'] = set()
+                type_users[issue_number]['core'] = set()
 
-        contributors = [['id', 'count']]
-        for k in self.users_comments.keys():
-            count = 0
-            if k in self.users_comments.keys():
-                for association in self.users_comments[k]:
-                    if association == 'CONTRIBUTOR' or association == 'COLLABORATOR':
-                        count += 1
-            if k in self.users_issues.keys():
-                for association in self.users_issues[k]:
-                    if association == 'CONTRIBUTOR' or association == 'COLLABORATOR':
-                        count += 1
-            contributors.append([k, count])
+            user_status = self._check_user_status(comment['author_association'])
 
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_number_of_contributors.csv',
-                      contributors)
+            user_login = comment['user']['login']
 
-        return contributors
+            self.save_user_info(type_users, issue_number, database_users, user_status, user_login)
 
-    def number_of_core_devs(self):
-        """
-        Collect the amount of users with author_association equals to MEMBER and OWNER on the comments
-        :return: list of amount of users with author_association equal to MEMBER and OWNER per issue/pull request
-        :rtype: list
-        """
-        print("#### Number of Core Members ####")
+        opened_by = {}
+        for pull in database_pulls.find({}):
+            issue_number = pull['number']
 
-        core = [['id', 'count']]
-        for k in self.users_comments.keys():
-            count = 0
-            if k in self.users_comments.keys():
-                for association in self.users_comments[k]:
-                    if association == 'MEMBER' or association == 'OWNER':
-                        count += 1
-            if k in self.users_issues.keys():
-                for association in self.users_issues[k]:
-                    if association == 'MEMBER' or association == 'OWNER':
-                        count += 1
-            core.append([k, count])
+            if issue_number not in type_users.keys():
+                type_users[issue_number] = {}
+                type_users[issue_number]['newbies'] = set()
+                type_users[issue_number]['contributors'] = set()
+                type_users[issue_number]['core'] = set()
 
-        csv = CSVHandler()
-        csv.write_csv(self.path + '/' + self.project + '/metrics/',
-                      self.project + '_number_of_core_developers.csv',
-                      core)
+            user_status = self._check_user_status(pull['author_association'])
 
-        return core
+            user_login = pull['user']['login']
 
-    def _get_users_labels_in_comments(self):
-        """
-        Collects the author_association of each comment on issue/pull requests
-        :return: lists of author_associations per issue/pull requests
-        :rtype: list
-        """
-        mypath = self.path + self.project + '/comments/individual/'
-        json = JSONHandler(mypath)
+            opened_by[issue_number] = user_status
 
-        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+            self.save_user_info(type_users, issue_number, database_users, user_status, user_login)
 
-        users = {}
-        hash = {}
-        for file in onlyfiles:
-            comments = json.open_json(file)
-            for comment in comments:
-                issue = comment['issue_url'].split('/')
-                issue = issue[len(issue) - 1]
+            if pull['merged_by']:
+                user_login = pull['merged_by']['login']
 
-                if issue not in users.keys():
-                    users[issue] = []
+                author = database_users.find_one({'username': user_login})
+                if author:
+                    if 'author_association' not in author.keys():
+                        continue
 
-                if str(issue + comment['user']['login']) not in hash.keys():
-                    hash[issue + comment['user']['login']] = 0
-                    users[issue].append(comment['author_association'])
+                    status = author['author_association']
 
-        return users
+                    if not status:
+                        continue
 
-    def _get_users_labels_in_issues_and_pulls(self):
-        """
-        Collects the author_association of issue/pull requests (opened, closed or merged)
-        :return: lists of author_associations per issue/pull requests
-        :rtype: list
-        """
-        path = self.path + '/' + self.project
-        json = JSONHandler(path + '/')
-        issues = json.open_json(self.project + '_issues.json')
-        pulls = json.open_json(self.project + '_pulls.json')
+                    self.save_user_info(type_users, issue_number, database_users, status, user_login)
 
-        # author_association = [['id', 'association', 'created_at']]
-        author_association = {}
-        for issue in issues:
-            if issue['author_association']:
-                # author_association.append([issue['issue_number'], issue['author_association'], issue['created_at']])
-                author_association[issue['issue_number']] = issue['author_association']
+            if pull['assignees']:
+                for assignee in pull['assignees']:
+                    user_login = assignee['login']
 
-        for pull in pulls:
-            if pull['author_association']:
-                author_association[pull['pull_request_number']] = pull['author_association']
-                # author_association.append([pull['pull_request_number'], pull['author_association'], pull['created_at']])
+                    author = database_users.find_one({'username': user_login})
+                    if author:
+                        if 'author_association' not in author.keys():
+                            continue
 
-        return author_association
-        # csv = CSVHandler()
-        # csv.write_csv(self.path + '/' + self.project + '/metrics/', 'author_association.csv', author_association)
+                        status = author['author_association']
+
+                        if not status:
+                            continue
+
+                        self.save_user_info(type_users, issue_number, database_users, status, user_login)
+
+            if pull['requested_reviewers']:
+                for reviewer in pull['requested_reviewers']:
+                    user_login = reviewer['login']
+
+                    author = database_users.find_one({'username': user_login})
+                    if author:
+                        if 'author_association' not in author.keys():
+                            continue
+
+                        status = author['author_association']
+
+                        if not status:
+                            continue
+
+                        self.save_user_info(type_users, issue_number, database_users, status, user_login)
+
+        for issue_number in type_users.keys():
+
+            if database_metrics.find_one({'issue_number': issue_number}):
+                database_metrics.update_one({'issue_number': issue_number},
+                    {"$set": {
+                        "newbies": len(type_users[issue_number]['newbies']),
+                        "contributors": len(type_users[issue_number]['contributors']),
+                        "core_developers": len(type_users[issue_number]['core'])
+                    }})
+                continue
+            database_users.insert_one({
+                        'issue_number': issue_number,
+                        "newbies": len(type_users[issue_number]['newbies']),
+                        "contributors": len(type_users[issue_number]['contributors']),
+                        "core_developers": len(type_users[issue_number]['core']),
+                        "opened_by": opened_by[issue_number]
+                    })
+
+    @staticmethod
+    def _check_user_status(author_association: str):
+        if author_association == 'MEMBER' or author_association == 'OWNER':
+            return "CORE_DEVELOPER"
+
+        if author_association == 'CONTRIBUTOR' or author_association == 'COLLABORATOR':
+            return "CONTRIBUTOR"
+
+        if author_association == 'NONE' or author_association == 'FIRST_TIMER' or author_association == 'FIRST_TIME_CONTRIBUTOR':
+            return "NEWCOMER"
+
+    def turnover(self):
+
+        print("#### User Turnover ####")
+
+        database_pulls = self.database['pull_requests']
+        database_comments = self.database['comments']
+        database_commits = self.database['commits']
+
+        prs_by_user = self._get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
+        comments_by_user = self._get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
+        commits_by_user = self._get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
+
+        user_action = {}
+
+        user_action = self._check_interactions_days(prs_by_user, 'user_pulls', user_action)
+        user_action = self._check_interactions_days(comments_by_user, 'user_comments', user_action)
+        user_action = self._check_interactions_days(commits_by_user, 'user_commits', user_action)
+
+        database_users = self.database['users']
+
+        for user in user_action.keys():
+
+            before = user_action[user]['interacted_before_180_days']
+            within = user_action[user]['interacted_within_180_days']
+            status = None
+
+            if before and not within:
+                status = "Left"
+            if within and not before:
+                status = "New"
+
+            if database_users.find_one({"username": user}):
+                database_users.update_one({"username": user},
+                                    {'$set': {"interacted_before_180_days": before,
+                                    "interacted_within_180_days": within,
+                                     "turnover": status}})
+            else:
+                database_users.insert_one({"username": user,
+                                    "interacted_before_180_days": before,
+                                    "interacted_within_180_days": within,
+                                           "turnover": status})
+
+        users = database_users.find()
+
+        
+
+    def experience(self):
+
+        print("#### User Experience ####")
+
+        database_pulls = self.database['pull_requests']
+        database_comments = self.database['comments']
+        database_commits = self.database['commits']
+        database_users = self.database['users']
+
+        prs_by_user = self._get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
+        comments_by_user = self._get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
+        commits_by_user = self._get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
+
+        user_days = {}
+        user_days = self._get_first_day(prs_by_user, user_days, 'user_pulls', 'pr_days')
+        user_days = self._get_first_day(comments_by_user, user_days, 'user_comments', 'comment_days')
+        user_days = self._get_first_day(commits_by_user, user_days, 'user_commits', 'commit_days')
+
+        for user in user_days.keys():
+            bigger = max(user_days[user]['commit_days'], user_days[user]['pr_days'], user_days[user]['comment_days'])
+
+            if database_users.find_one({"username": user}):
+                database_users.update_one({"username": user},
+                                    {'$set': {'experience_in_days': bigger}})
+            else:
+                database_users.insert_one({"username": user,
+                                    'experience_in_days': bigger})
+
+    @staticmethod
+    def _get_first_day(array, user_days, group_key, elem_key):
+        for elem in array:
+            username = elem['_id']
+
+            if not username:
+                continue
+
+            first = elem[group_key][-1]
+
+            if username not in user_days.keys():
+                user_days[username] = {
+                    'pr_days': 0,
+                    'comment_days': 0,
+                    'commit_days': 0
+                }
+
+            user_days[username][elem_key] = DateUtils.days_between_date_and_now(first['created_at'])
+
+        return user_days
+
+    @staticmethod
+    def _get_user_interactions(database, group_key, push_key, push_value):
+
+        push = {push_key: push_value, 'created_at': '$created_at'}
+        push_commit = {push_key: push_value, 'created_at': '$commit.author.date'}
+
+        if 'commit' in group_key:
+            push = push_commit
+
+        return database.aggregate([
+            {
+                '$group': {
+                    '_id': '$user.login',
+                    group_key: {
+                        '$push': push
+                    }
+                }
+            }, {
+                '$sort': {
+                    'created_at': -1
+                }
+            }
+        ])
+
+    @staticmethod
+    def _check_interactions_days(elements, key, last_user_action):
+        for element in elements:
+            if element['_id'] not in last_user_action.keys():
+                last_user_action[element['_id']] = {
+                    "interacted_before_180_days": False,
+                    "interacted_within_180_days": False
+                }
+
+            if element['_id'] in last_user_action.keys():
+                if last_user_action[element['_id']]['interacted_before_180_days'] and \
+                        last_user_action[element['_id']]['interacted_within_180_days']:
+                    continue
+
+            for user_elem_list in element[key]:
+                if DateUtils.days_between_date_and_now(user_elem_list['created_at']) >= 180:
+                    last_user_action[element['_id']]['interacted_before_180_days'] = True
+                    break
+
+                if DateUtils.days_between_date_and_now(user_elem_list['created_at']) < 180:
+                    last_user_action[element['_id']]['interacted_within_180_days'] = True
+
+        return last_user_action
+
+    def save_user_info(self, type_users, issue_number, database_users, user_status, user_login):
+
+        if database_users.find_one({"username": user_login}):
+            database_users.update_one({"username": user_login}, {'$set': {"author_association": user_status}})
+        else:
+            database_users.insert_one({"username": user_login, "author_association": user_status})
+            database_users.insert_one({"username": user_login, "author_association": user_status})
+
+        if user_status == 'NEWCOMER':
+            type_users[issue_number]['newbies'].add(user_login)
+        elif user_status == 'CONTRIBUTOR':
+            type_users[issue_number]['contributors'].add(user_login)
+        elif user_status == 'CORE_DEVELOPER':
+            type_users[issue_number]['core'].add(user_login)
+
+
