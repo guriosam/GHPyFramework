@@ -10,6 +10,5 @@
       "owner": "project_owner",
       "repo": "repository_name"
     }
-  ],
-  "output_path": "your_output_path"
+  ]
 }
