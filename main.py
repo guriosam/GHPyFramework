@@ -27,7 +27,6 @@ class Main:
 
     def run_collector(self):
 
-
         for project in self.projects:
             project_name = project['repo']
             project_owner = project['owner']
@@ -54,8 +53,6 @@ class Main:
 
             #NumberOf(project_owner, project_name, database).fix_merged_prs()
 
-            #self.fix_prs_in_mongo()
-
             #DiscussionDuration(project_owner, project_name, database).get_time_in_days_between_open_and_close(issue=False)
             #DiscussionSize(project_owner, project_name, database).get_discussion_size(issue=False)
             #DeveloperStatus(project_owner, project_name, database).user_profiling()
@@ -66,9 +63,128 @@ class Main:
             #TimeBetweenReplies(project_owner, project_name, database).mean_time_between_open_and_first_last_and_merge()
 
             # User Metrics - Oliveira
-            #self._run_user_metrics(project_owner, project_name, database)
+            self._run_user_metrics(project_owner, project_name, database)
 
             print("________________________")
+
+    def collect_merged_commits_subset(self):
+
+        commits_subsets = {}
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+
+            merged_commits = set()
+            database_commits = database['commits']
+            database_prs = database['pull_requests']
+            regex = '#[0-9]*'
+            for commit in database_commits.find({'commit.message': {'$regex': regex}}):
+                if commit['sha']:
+                    merged_commits.add(commit['sha'])
+
+            for pull_request in database_prs.find({'merge_commit_sha': {'$ne': None}}):
+                if pull_request['merge_commit_sha']:
+                    merged_commits.add(pull_request['merge_commit_sha'])
+
+            commits_subsets[project_name] = list(merged_commits)
+
+
+        with open('merged_commits.json', 'w') as f:
+            json.dump(commits_subsets, f, indent=4)
+
+    def output_results_oliveira(self):
+
+        output = {}
+
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+
+            print('###########' + project_name + '############\n')
+
+
+            database_metrics = database['metrics']
+            database_users = database['users']
+
+            output[project_name] = {'pr_metrics': [], 'user_metrics': []}
+
+            for metric in database_metrics.find({}):
+                if 'username' in metric.keys():
+                    continue
+
+                del metric['_id']
+                output[project_name]['pr_metrics'].append(metric)
+
+
+            for user in database_users.find({}):
+                if 'username' not in user.keys():
+                    continue
+
+                del user['_id']
+                output[project_name]['user_metrics'].append(user)
+
+
+        with open('metrics_output_oliveira.json', 'w') as f:
+            json.dump(output, f, indent=4)
+
+    def sample_refactoring_and_design_messages(self):
+
+        comments = {}
+
+        keywords = ['refactor', 'split', 'introduc', 'fix', 'decompos', 'reorganiz', 'mov', 'extract', 'merg', 'renam',
+                    'chang', 'restructur', 'format', 'extend', 'rewrite', 'replace', 'simplif', 'recreat', 'improv',
+                    'add', 'modif', 'enhanc', 'rework', 'inlin', 'redesign', 'clean', 'reduc', 'encapsulat']
+
+        output = []
+
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+
+            for keyword in keywords:
+                count = 0
+                for comment in database['comments'].find({'body': {'$regex': keyword}}):
+                    output.append(
+                        {
+                            'project': project_name,
+                            'id': comment['id'],
+                            'body': comment['body'],
+                            'url': comment['html_url']
+                        }
+                    )
+
+                    count += 1
+
+                    if count > 5:
+                        break
+
+        sample1 = random.sample(output, 200)
+        sample2 = random.sample(output, 200)
+
+        with open('comments_1.json', 'w') as f:
+            json.dump(sample1, f, indent=4)
+
+        with open('comments_2.json', 'w') as f:
+            json.dump(sample2, f, indent=4)
+
+            #comments[project_name] = list(comments[project_name])
+
+    def import_refactorings(self):
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+
+            refact = RefactoringManager(project_owner, project_name, database)
+            refact.run()
 
     @staticmethod
     def _run_user_metrics(project_owner, project_name, database):
@@ -99,4 +215,10 @@ main = Main()
 #main.run_collector()
 #main.run_metrics()
 
+#main.output_results_oliveira()
+#main.collect_merged_commits_subset()
+
+#main.sample_refactoring_and_design_messages()
+
+#main.import_refactorings()
 
