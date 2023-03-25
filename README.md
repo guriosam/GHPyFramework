@@ -15,9 +15,7 @@ Repository of the GHFramework written in Python
 > 
 > Add the project owner and repository name of the project to the "projects" list on the config file. For instance, the repository https://github.com/square/okhttp has as owner "square" and repository name "okhttp'.
 >
-> Finally, add your output path (for any log or temp file) on the "output_path" variable at the config_dev.json.
->
-> This collector supports the data collection of four entitites: Commits, Issues, Pull Requests and Issue Comments.
+> This collector supports the data collection of four entitites by default: Commits, Issues, Pull Requests and Issue Comments.
 > 
 > On main.py, descomment the functions you want to use and comment the ones you do not want to use.
 
