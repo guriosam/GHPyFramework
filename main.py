@@ -51,18 +51,18 @@ class Main:
 
             print('###########' + project_name + '############\n')
 
-            #NumberOf(project_owner, project_name, database).fix_merged_prs()
+            NumberOf(project_owner, project_name, database).fix_merged_prs()
 
-            #DiscussionDuration(project_owner, project_name, database).get_time_in_days_between_open_and_close(issue=False)
-            #DiscussionSize(project_owner, project_name, database).get_discussion_size(issue=False)
-            #DeveloperStatus(project_owner, project_name, database).user_profiling()
+            DiscussionDuration(project_owner, project_name, database).get_time_in_days_between_open_and_close(issue=False)
+            DiscussionSize(project_owner, project_name, database).get_discussion_size(issue=False)
+            DeveloperStatus(project_owner, project_name, database).user_profiling()
 
-            #NumberSnippets(project_owner, project_name, database).get_snippet_metrics()
+            NumberSnippets(project_owner, project_name, database).get_snippet_metrics()
 
-            #TimeBetweenReplies(project_owner, project_name, database).mean_time_between_replies()
-            #TimeBetweenReplies(project_owner, project_name, database).mean_time_between_open_and_first_last_and_merge()
+            TimeBetweenReplies(project_owner, project_name, database).mean_time_between_replies()
+            TimeBetweenReplies(project_owner, project_name, database).mean_time_between_open_and_first_last_and_merge()
 
-            # User Metrics - Oliveira
+            # User Metrics
             self._run_user_metrics(project_owner, project_name, database)
 
             print("________________________")
@@ -90,46 +90,8 @@ class Main:
 
             commits_subsets[project_name] = list(merged_commits)
 
-
         with open('merged_commits.json', 'w') as f:
             json.dump(commits_subsets, f, indent=4)
-
-    def output_results_oliveira(self):
-
-        output = {}
-
-        for project in self.projects:
-            project_name = project['repo']
-            project_owner = project['owner']
-
-            database = self.mongo_connection[project_owner + '-' + project_name]
-
-            print('###########' + project_name + '############\n')
-
-
-            database_metrics = database['metrics']
-            database_users = database['users']
-
-            output[project_name] = {'pr_metrics': [], 'user_metrics': []}
-
-            for metric in database_metrics.find({}):
-                if 'username' in metric.keys():
-                    continue
-
-                del metric['_id']
-                output[project_name]['pr_metrics'].append(metric)
-
-
-            for user in database_users.find({}):
-                if 'username' not in user.keys():
-                    continue
-
-                del user['_id']
-                output[project_name]['user_metrics'].append(user)
-
-
-        with open('metrics_output_oliveira.json', 'w') as f:
-            json.dump(output, f, indent=4)
 
     def sample_refactoring_and_design_messages(self):
 
@@ -189,21 +151,20 @@ class Main:
     @staticmethod
     def _run_user_metrics(project_owner, project_name, database):
 
-        #DeveloperStatus(project_owner, project_name, database).turnover()
-        #DeveloperStatus(project_owner, project_name, database).experience()
+        DeveloperStatus(project_owner, project_name, database).turnover()
+        DeveloperStatus(project_owner, project_name, database).experience()
 
         NumberOf(project_owner, project_name, database).get_commits_by_file_type()
         NumberOf(project_owner, project_name, database).get_number_of_reviews_by_developer()
-        #NumberOf(project_owner, project_name, database).get_mean_between_merged_prs_by_user()
-        #NumberOf(project_owner, project_name, database).get_labels_rank_by_user()
-        #NumberOf(project_owner, project_name, database).get_number_of_prs_opened_by_user()
-        #NumberOf(project_owner, project_name, database).get_number_of_prs_closed_by_user()
-        #NumberOf(project_owner, project_name, database).get_number_of_comments_by_user()
-        #NumberOf(project_owner, project_name, database).get_number_of_commits_by_user()
-
-        #NumberOf(project_owner, project_name, database).get_size_of_commits_by_user()
-        #NumberOf(project_owner, project_name, database).get_number_of_merged_prs_by_user()
-        #NumberOf(project_owner, project_name, database).get_number_of_words_comments_by_user()
+        NumberOf(project_owner, project_name, database).get_mean_between_merged_prs_by_user()
+        NumberOf(project_owner, project_name, database).get_labels_rank_by_user()
+        NumberOf(project_owner, project_name, database).get_number_of_prs_opened_by_user()
+        NumberOf(project_owner, project_name, database).get_number_of_prs_closed_by_user()
+        NumberOf(project_owner, project_name, database).get_number_of_comments_by_user()
+        NumberOf(project_owner, project_name, database).get_number_of_commits_by_user()
+        NumberOf(project_owner, project_name, database).get_size_of_commits_by_user()
+        NumberOf(project_owner, project_name, database).get_number_of_merged_prs_by_user()
+        NumberOf(project_owner, project_name, database).get_number_of_words_comments_by_user()
 
 #Number of Reviews by the developer
 #Number of lines revised by the developer
