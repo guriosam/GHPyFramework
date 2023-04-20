@@ -40,14 +40,18 @@ class CommentAPI(APIInterface):
         :rtype: list
         """
 
-        pulls = self.database_pulls.find({})
+        try:
 
-        for pull in pulls:
-            if review:
-                self.collect_single_review(str(pull['number']))
-            else:
-                self.collect_single(str(pull['number']))
+            pulls = self.database_pulls.find({}, no_cursor_timeout=True)
 
+            for pull in pulls:
+                if review:
+                    self.collect_single_review(str(pull['number']))
+                else:
+                    self.collect_single(str(pull['number']))
+
+        except:
+            pass
         #issues = self.database_issues.find({})
 
         #for issue in issues:
