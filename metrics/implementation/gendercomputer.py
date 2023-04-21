@@ -32,5 +32,27 @@ class GenderDiversity:
         print(users)
         return users
 
+    def gender_extraction(self):
+
+        collection = self.database['users_api']
+        names = collection.find({})
+        genero = []
+        gc = GenderExtractor()
+        collection = self.database['users']
+        for name in names:
+            if name['name']:
+                full_name = name['name']
+                first_name = full_name.split()[0]
+                if name['location']:
+                    userinfo = gc.extract_gender(first_name, name['location'])
+                    genero.append(userinfo)
+                else:
+                    userinfo = gc.extract_gender(first_name)
+                    genero.append(userinfo)
+                collection.update_one({"username": name['login']},{'$set': {'gender': userinfo}})
+
+
+        print(genero)
+
 
 

@@ -179,6 +179,7 @@ class Main:
 
             users_list = GenderDiversity(database).gender()
             users_json = APICollector(database).collect_users('Netflix', 'zuul', users_list)
+            user_info = GenderDiversity(database).gender_extraction()
 
 
 #Number of Reviews by the developer
