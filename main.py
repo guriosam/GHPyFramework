@@ -17,6 +17,7 @@ from utils.date import DateUtils
 from utils.json_handler import JSONHandler
 
 from metrics.implementation.gendercomputer import GenderDiversity
+from metrics.implementation.team_size import teamSize
 
 
 
@@ -181,6 +182,15 @@ class Main:
             users_json = APICollector(database).collect_users('Netflix', 'zuul', users_list)
             user_info = GenderDiversity(database).gender_extraction()
 
+    def test_team_user_metric(self):
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+
+            team_user = teamSize(database).teste()
+
 
 #Number of Reviews by the developer
 #Number of lines revised by the developer
@@ -189,9 +199,10 @@ class Main:
 #Number of Commits by type of file (.java, .xml)
 
 main = Main()
-main.test_gender_metric()
+#main.test_gender_metric()
 #main.run_collector()
 #main.run_metrics()
+main.test_team_user_metric()
 
 #main.output_results_oliveira()
 #main.collect_merged_commits_subset()
