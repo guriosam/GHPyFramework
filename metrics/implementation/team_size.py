@@ -9,15 +9,20 @@ class teamSize:
         collections_pull_resquest = self.database['pull_requests']
         numbers = collections_pull_resquest.find({})
         collections_comments = self.database['comments']
-        comments = collections_comments.find({})
+
         prnumbers = set()
-        users_comments = set()
+        users_comments = []
+        comments_user = []
+        users_team = {}
         for number in numbers:
             prnumbers.add(number['number'])
+            comments = collections_comments.find({})
             for comment in comments:
-                users_comments.add(comment['user.login'] where issue_number = numbers)
-
-
+                if comment['issue_number'] == number['number']:
+                    comments_user.append(comment['user']['login'])
+                    users_team[number['number']] = comments_user
+                    comments_user.clear()
+            users_comments.append(users_team)
         print(users_comments)
 
     def _get_user_info(database, group_key, push_key, push_value):
