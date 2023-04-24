@@ -1,5 +1,6 @@
 import datetime
 
+
 class DateUtils:
 
     def get_days_between_dates(self, date1, date2):
@@ -13,13 +14,19 @@ class DateUtils:
     def sort_dates(dates):
         return sorted(dates)
 
-
     @staticmethod
     def days_between_date_and_now(date):
         now = datetime.datetime.utcnow()
         date = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
         result = now - date
         return result.days
+
+    @staticmethod
+    def minus_days(date, days):
+        date = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+        result = date - datetime.timedelta(days)
+        return result
+
 
 
 

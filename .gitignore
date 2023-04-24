@@ -10,3 +10,4 @@ data
 config_dev.json
 main_agents.py
 main_daniel.py
+.DS_Store

@@ -106,7 +106,6 @@ class TimeBetweenReplies:
                                            'mean_time_between_comments': mean_comments, 'mean_number_of_words': mean_words,
                                            'number_of_words': total_words})
 
-
     def mean_time_between_open_and_first_last_and_merge(self):
         """
         Collect the mean time between ------ inside an issue or pull request

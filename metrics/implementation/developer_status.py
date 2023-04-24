@@ -7,6 +7,7 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+from utils.common_mongo_queries import CommonQueries
 from utils.date import DateUtils
 
 
@@ -184,8 +185,6 @@ class DeveloperStatus:
 
         users = database_users.find()
 
-        
-
     def experience(self):
 
         print("#### User Experience ####")
@@ -195,9 +194,9 @@ class DeveloperStatus:
         database_commits = self.database['commits']
         database_users = self.database['users']
 
-        prs_by_user = self._get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
-        comments_by_user = self._get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
-        commits_by_user = self._get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
+        prs_by_user = CommonQueries.get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
+        comments_by_user = CommonQueries.get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
+        commits_by_user = CommonQueries.get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
 
         user_days = {}
         user_days = self._get_first_day(prs_by_user, user_days, 'user_pulls', 'pr_days')
@@ -234,30 +233,6 @@ class DeveloperStatus:
             user_days[username][elem_key] = DateUtils.days_between_date_and_now(first['created_at'])
 
         return user_days
-
-    @staticmethod
-    def _get_user_interactions(database, group_key, push_key, push_value):
-
-        push = {push_key: push_value, 'created_at': '$created_at'}
-        push_commit = {push_key: push_value, 'created_at': '$commit.author.date'}
-
-        if 'commit' in group_key:
-            push = push_commit
-
-        return database.aggregate([
-            {
-                '$group': {
-                    '_id': '$user.login',
-                    group_key: {
-                        '$push': push
-                    }
-                }
-            }, {
-                '$sort': {
-                    'created_at': -1
-                }
-            }
-        ])
 
     @staticmethod
     def _check_interactions_days(elements, key, last_user_action):

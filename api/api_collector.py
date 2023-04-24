@@ -21,6 +21,8 @@ from api.endpoint.commit import CommitAPI
 from api.endpoint.issue import IssueAPI
 from api.endpoint.prototypeAPI import PrototypeAPI
 from api.endpoint.pullrequest import PullsAPI
+from api.endpoint.users import UsersAPI
+from utils.common_mongo_queries import CommonQueries
 from utils.json_handler import JSONHandler
 
 __author__ = "Caio Barbosa"
@@ -227,3 +229,34 @@ class APICollector(object):
     def collect_comments_pulls(self, owner: str, project: str):
         print('Collecting Pulls Comments')
         self.collect_all(project, CommentAPI(owner, project, self.database), 'review_comments_url')
+
+    def collect_users(self, owner: str, project: str, users: list):
+        """
+        Collect Users from the GitHub API
+        :param owner: repository owner
+        :type owner: str
+        :param project: project name
+        :type project: str
+        :param users: list of users
+        :type users: list
+        :return: list of users
+        :rtype: list
+        """
+        print('Collecting Users')
+        userapi = UsersAPI(owner, project, self.database)
+
+        users = set()
+
+        prs_by_user = CommonQueries.get_user_interactions(self.database['pull_requests'], 'user_pulls', 'pr_number',
+                                                          '$number')
+        comments_by_user = CommonQueries.get_user_interactions(self.database['comments'], 'user_comments', 'comment_id',
+                                                               '$id')
+        commits_by_user = CommonQueries.get_user_interactions(self.database['commits'], 'user_commits', 'commit',
+                                                              '$sha')
+
+        for user in prs_by_user:
+            users.add(user)
+
+
+        for user in users:
+            userapi.collect_single(user)

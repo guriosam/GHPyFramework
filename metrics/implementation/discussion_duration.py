@@ -32,6 +32,7 @@ class DiscussionDuration:
 
         query_result = database.find({"state": "closed"})
 
+
         for pull_request in query_result:
             merged = pull_request['created_at']
             if 'merged_at' in pull_request.keys() and pull_request['merged_at']:

@@ -41,6 +41,14 @@ class Main:
             collector.collect_comments(project_owner, project_name)
             collector.collect_comments_pulls(project_owner, project_name)
 
+    def pre_processing_data_before_metrics(self):
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+            NumberOf(project_owner, project_name, database).fix_merged_prs()
+
     def run_metrics(self):
 
         for project in self.projects:
@@ -50,8 +58,6 @@ class Main:
             database = self.mongo_connection[project_owner + '-' + project_name]
 
             print('###########' + project_name + '############\n')
-
-            NumberOf(project_owner, project_name, database).fix_merged_prs()
 
             DiscussionDuration(project_owner, project_name, database).get_time_in_days_between_open_and_close(issue=False)
             DiscussionSize(project_owner, project_name, database).get_discussion_size(issue=False)
@@ -174,6 +180,7 @@ class Main:
 
 main = Main()
 #main.run_collector()
+#main.pre_processing_data_before_metrics()
 #main.run_metrics()
 
 #main.output_results_oliveira()
