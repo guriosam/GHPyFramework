@@ -9,7 +9,6 @@ class JSONHandler:
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
-
     def save_json(self, data, name):
         try:
             if not os.path.exists(self.path):
