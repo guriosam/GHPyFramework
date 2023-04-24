@@ -48,6 +48,13 @@ class TeamSize:
 
                 #TODO salvar nas PRs em database_metrics
 
+                if not self.database['metrics'].find_one({'issue_number': pr['number']}):
+                    self.database['metrics'].insert_one({'issue_number': pr['number']})
+
+                self.database['metrics'].update_one({"issue_number": pr['number']},
+                                                    {'$set': {'team_size': len(team), 'newcomers_size': len(new),
+                                                              'users_left_size': len(left)}})
+
         return users_by_pr
 
     @staticmethod
