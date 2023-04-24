@@ -1,38 +1,43 @@
 from pymongo.database import Database
 import pandas as pd
-from scipy.stats import ranksums, stats
+from scipy.stats import ranksums
 
 
 # Wilcoxon Rank-Sum Test
-# TODO
-# https://github.com/guriosam/revealing_social_aspects_of_design_decay/blob/master/wilcoxon_analysis.R
-# https://stats.stackexchange.com/questions/235243/when-should-i-use-scipy-stats-wilcoxon-instead-of-scipy-stats-ranksums
-class WilcoxonTest:
+class WilcoxonRankSumTest:
 
-    def __init__(self, owner: str, repo: str, database: Database = None):
-        self.owner = owner
-        self.repo = repo
+    def __init__(self, database: Database = None):
         self.database = database
 
     @staticmethod
-    def _distribute_samples(input_data, metric):
-        return [], []
+    def wilcoxon_test(input_data, metric):
+        degraded_dist = input_data[input_data["design_change"] is True][metric]
+        clean_dist = input_data[input_data["design_change"] is False][metric]
 
-    @staticmethod
-    def _run_wilcoxon(refactored, not_refactored):
+        p_value = None
 
-        statistic, p = ranksums(x = refactored, y = not_refactored)
-        statistic2, p2 = ranksums(x = refactored, y = not_refactored, alternative='greater')
-        statistic3, p3 = ranksums(x = refactored, y = not_refactored, alternative='less')
+        if degraded_dist.size > 0 and clean_dist.size > 0:
+            test_stat, p_value = ranksums(degraded_dist, clean_dist)
 
+        if not p_value:
+            p_value = float('nan')
 
-        return []
+        metric_data = pd.DataFrame({"metric": [metric], "pvalue": [p_value]})
+
+        return metric_data
 
     def _collect_metrics(self):
         metrics = pd.DataFrame()
 
-        database = self.database['metrics']
+        database_metrics = self.database['metrics']
 
+        all_metrics = database_metrics.find({})
+
+        print(list(all_metrics))
+
+        for metric in all_metrics:
+            print(metric)
+            metrics.append([])
 
         return metrics
 
@@ -40,12 +45,16 @@ class WilcoxonTest:
 
         metrics = self._collect_metrics()
 
+        return
+
         cols = metrics.columns
 
-        for column_name in cols:
-            refactored, not_refactored = self._distribute_samples(metrics, column_name)
-            metric_data = self._run_wilcoxon(refactored, not_refactored)
+        results = pd.DataFrame(columns=["metric", "p_value"])
 
+        for metric in cols:
+            metric_data = self.wilcoxon_test(metrics, metric)
+            results_density = pd.concat([results, metric_data])
 
+        results["significant"] = results["p_value"] <= 0.05
 
-
+        #TODO save results on database
