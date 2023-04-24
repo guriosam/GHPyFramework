@@ -17,7 +17,7 @@ from utils.date import DateUtils
 from utils.json_handler import JSONHandler
 
 from metrics.implementation.gendercomputer import GenderDiversity
-from metrics.implementation.team_size import teamSize
+from metrics.implementation.team_size import TeamSize
 
 
 
@@ -189,7 +189,7 @@ class Main:
 
             database = self.mongo_connection[project_owner + '-' + project_name]
 
-            team_user = teamSize(database).get_team
+            team_user = TeamSize(database).get_team()
 
 
 #Number of Reviews by the developer
