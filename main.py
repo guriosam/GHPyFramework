@@ -17,8 +17,7 @@ from utils.date import DateUtils
 from utils.json_handler import JSONHandler
 
 from metrics.implementation.gendercomputer import GenderDiversity
-from metrics.implementation.team_size import teamSize
-
+from metrics.implementation.team_size import TeamSize
 
 
 class Main:
@@ -111,7 +110,6 @@ class Main:
             project_name = project['repo']
             project_owner = project['owner']
 
-
             database = self.mongo_connection[project_owner + '-' + project_name]
 
             for keyword in keywords:
@@ -183,13 +181,13 @@ class Main:
             user_info = GenderDiversity(database).gender_extraction()
 
     def test_team_user_metric(self):
+
         for project in self.projects:
+            print(project)
             project_name = project['repo']
             project_owner = project['owner']
-
             database = self.mongo_connection[project_owner + '-' + project_name]
-
-            team_user = teamSize(database).get_team
+            team_user = TeamSize(database).get_team()
 
 
 #Number of Reviews by the developer
