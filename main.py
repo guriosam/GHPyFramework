@@ -189,7 +189,6 @@ class Main:
             database = self.mongo_connection[project_owner + '-' + project_name]
             team_user = TeamSize(database).get_team()
 
-
 #Number of Reviews by the developer
 #Number of lines revised by the developer
 #Number of Files revised by developer
