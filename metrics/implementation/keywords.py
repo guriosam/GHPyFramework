@@ -63,7 +63,14 @@ class Keywords:
             pr_design_density.update(self.density_of_comments(pr, pr_design_keywords[pr['number']]))
             pr_refactoring_density.update(self.density_of_comments(pr, pr_refactoring_keywords[pr['number']]))
 
+            self.database['metrics'].update_one({"issue_number": pr['number']},
+                                                {'$set': {'design_keyword': pr_design_keywords[pr['number']],
+                                                          'refactoring_keyword': pr_refactoring_keywords[pr['number']],
+                                                          'design_density': pr_design_density[pr['number']],
+                                                          'refactoring_density': pr_refactoring_density[pr['number']]}})
+
         print(pr_design_keywords)
         print(pr_refactoring_keywords)
         print(pr_design_density)
         print(pr_refactoring_density)
+
