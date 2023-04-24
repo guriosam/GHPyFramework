@@ -47,12 +47,33 @@ class TeamSize:
             pr_merged_at = pr['merged_at']
 
             for user in users['contributor']:
-                user_commits = commits_by_user[user]
-                user_prs = prs_by_user[user]
-                user_comments = comments_by_user[user]
+                user_commits = []
+                for commit in commits_by_user:
+                    if not commit['_id']:
+                        continue
+                    if user in commit['_id']:
+                        user_commits = commit['user_commits']
+                        break
+
+                user_prs = []
+                for prs in prs_by_user:
+                    if not prs['_id']:
+                        continue
+                    if user in prs['_id']:
+                        user_prs = prs['user_pulls']
+                        break
+
+                user_comments = []
+                for comment in prs_by_user:
+                    if not comment['_id']:
+                        continue
+                    if user in comment['_id']:
+                        user_comments = comment['user_comments']
+                        break
 
                 for user_commit in user_commits:
-                    days_since_commit = DateUtils().get_days_between_dates(user_commit, pr_merged_at)
+                    days_since_commit = DateUtils().get_days_between_dates(user_commit['created_at'], pr_merged_at)
+                    print("Days since commits: ", days_since_commit)
                     if days_since_commit < 0:
                         continue
                     # Check if user has commented before and after 180 days
@@ -62,7 +83,8 @@ class TeamSize:
                         users['left'].add(user)
 
                 for user_pr in user_prs:
-                    days_since_pr = DateUtils().get_days_between_dates(user_pr, pr_merged_at)
+                    days_since_pr = DateUtils().get_days_between_dates(user_pr['created_at'], pr_merged_at)
+                    print("Days since pr: ", days_since_pr)
                     if days_since_pr < 0:
                         continue
                     # Check if user has commented before and after 180 days
@@ -72,7 +94,8 @@ class TeamSize:
                         users['left'].add(user)
 
                 for user_comment in user_comments:
-                    days_since_comment = DateUtils().get_days_between_dates(user_comment, pr_merged_at)
+                    days_since_comment = DateUtils().get_days_between_dates(user_comment['created_at'], pr_merged_at)
+                    print("Days since comments: ", days_since_comment)
                     if days_since_comment < 0:
                         continue
                     # Check if user has commented before and after 180 days
@@ -87,17 +110,18 @@ class TeamSize:
                 new = users['new'] - team
                 left = users['left'] - team
 
-                exit()
+                print(users['new'])
+                print(users['left'])
 
-                if not self.database['metrics'].find_one({'issue_number': pr_number}):
-                    self.database['metrics'].insert_one({'issue_number': pr_number})
-
-                self.database['metrics'].update_one({"issue_number": pr_number},
-                                                    {'$set': {'team_size': len(team), 'newcomers_size': len(new),
-                                                              'users_left_size': len(left)}})
+                #print(team)
+                #print(new)
+                #print(left)
 
 
-            return users_by_pr
+
+
+
+        return users_by_pr
 
     @staticmethod
     def _get_user_interactions(database, group_key, push_key, push_value):
