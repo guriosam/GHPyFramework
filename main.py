@@ -17,6 +17,7 @@ from utils.date import DateUtils
 from utils.json_handler import JSONHandler
 
 from metrics.implementation.gendercomputer import GenderDiversity
+from metrics.implementation.keywords import Keywords
 
 
 
@@ -169,7 +170,7 @@ class Main:
         NumberOf(project_owner, project_name, database).get_number_of_merged_prs_by_user()
         NumberOf(project_owner, project_name, database).get_number_of_words_comments_by_user()
 
-    def test_gender_metric(self):
+    def test_metrics(self):
 
         for project in self.projects:
             project_name = project['repo']
@@ -177,9 +178,10 @@ class Main:
 
             database = self.mongo_connection[project_owner + '-' + project_name]
 
-            users_list = GenderDiversity(database).gender()
-            users_json = APICollector(database).collect_users('Netflix', 'zuul', users_list)
-            user_info = GenderDiversity(database).gender_extraction()
+            #users_list = GenderDiversity(database).gender()
+            #users_json = APICollector(database).collect_users('Netflix', 'zuul', users_list)
+            #user_info = GenderDiversity(database).gender_extraction()
+            pr_keywords = Keywords(database).get_pr_keywords()
 
 
 #Number of Reviews by the developer
@@ -189,7 +191,7 @@ class Main:
 #Number of Commits by type of file (.java, .xml)
 
 main = Main()
-main.test_gender_metric()
+main.test_metrics()
 #main.run_collector()
 #main.run_metrics()
 
