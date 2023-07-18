@@ -1,18 +1,28 @@
 import matplotlib.pyplot as plt
 import networkx as nx
+from pymongo.database import Database
+
 
 class SocialNetwork:
 
-    def __init__(self, database):
+    def __init__(self, pull: None, database: Database = None):
         self.graph = nx.Graph()
         self.database = database
+        self.pull_target = pull
         self.construct_graph()
 
         self.lcc = self.largest_connected_component()
 
     @staticmethod
-    def _get_merged_by(pull):
+    def _get_pull_author(pull):
+        if pull['user']['login']:
+            pull_author = pull['user']['login']
+            return pull_author
 
+        return None
+
+    @staticmethod
+    def _get_merged_by(pull):
         if pull['merged_by']:
             user_login = pull['merged_by']['login']
             return user_login
@@ -50,18 +60,36 @@ class SocialNetwork:
 
         return commentators
 
+    def get_pull_requests(self):
+        pull_target_merged_at = self.pull_target['merged_at']
+        print(pull_target_merged_at)
+        pulls = self.database['pull_requests'].aggregate([
+            {"$match": {
+                "merged": True,
+                "merged_at": {"$lte": pull_target_merged_at}
+            }},
+            {"$sort": {"merged_at": 1}}
+        ])
+
+        return pulls
+
     def construct_graph(self):
 
-        pulls_database = self.database['pull_requests']
-        comments_database = self.database['comments']
+        pulls = self.get_pull_requests()
+        # TODO verficar a ordem cronologia para o pull request de referencia
 
-        pulls = pulls_database.find().sort({'created_at': 1})
+        pull_target_author = self._get_pull_author(self.pull_target)
+        print(pull_target_author)
 
         for pull in pulls:
+            print(pull["number"])
+            print(self.pull_target["number"])
 
-            pull_author = pull['author']['login']
+            # TODO check de o numero do pull request corrent eh diferent do referencia
 
-            pull_comments = comments_database.find({'issue_number': pull['number']})
+            pull_author = self._get_pull_author(pull)
+
+            pull_comments = self.database['comments'].find({'issue_number': pull['number']})
 
             merged_by = self._get_merged_by(pull)
             if merged_by:
@@ -76,13 +104,16 @@ class SocialNetwork:
 
             all_users = set()
 
-            all_users.update(merged_by, reviewers, assignees, commentators)
-            if pull_author in all_users:
-                all_users.remove(pull_author)
+            all_users.update(merged_by, reviewers, assignees, commentators, pull_author)
+            #if pull_target_author in all_users:
+            #    all_users.remove(pull_target_author)
 
             all_users = list(all_users)
 
             for participant in all_users:
+                if participant == pull_target_author:
+                    continue
+
                 try:
                     self.graph[pull_author][participant]['weight'] += 1
                 except (KeyError, IndexError):
@@ -101,20 +132,20 @@ class SocialNetwork:
     def degree_centrality(self):
         nodes_dict = nx.degree_centrality(self.lcc)
         try:
-            return nodes_dict[self.revision_author]
+            return nodes_dict[self._get_pull_author(self.pull_target)]
         except KeyError:
             return 0
 
     def closeness_centrality(self):
         try:
-            return nx.closeness_centrality(self.lcc, u=self.revision_author)
+            return nx.closeness_centrality(self.lcc, u=self._get_pull_author(self.pull_target))
         except nx.exception.NodeNotFound:
             return 0
 
     def betweenness_centrality(self):
         nodes_dict = nx.betweenness_centrality(self.lcc, weight='weight')
         try:
-            return nodes_dict[self.revision_author]
+            return nodes_dict[self._get_pull_author(self.pull_target)]
         except KeyError:
             return 0
 
@@ -127,19 +158,19 @@ class SocialNetwork:
             except:
                 return 0
         try:
-            return nodes_dict[self.revision_author]
+            return nodes_dict[self._get_pull_author(self.pull_target)]
         except KeyError:
             return 0
 
     def clustering_coefficient(self):
         try:
-            return nx.clustering(self.lcc, nodes=self.revision_author, weight='weight')
+            return nx.clustering(self.lcc, nodes=self._get_pull_author(self.pull_target), weight='weight')
         except nx.exception.NetworkXError:
             return 0
 
     def k_coreness(self):
         nodes_dict = nx.core_number(self.lcc)
         try:
-            return nodes_dict[self.revision_author]
+            return nodes_dict[self._get_pull_author(self.pull_target)]
         except KeyError:
             return 0

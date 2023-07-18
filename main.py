@@ -11,6 +11,7 @@ from metrics.implementation.discussion_duration import DiscussionDuration
 from metrics.implementation.discussion_size import DiscussionSize
 from metrics.implementation.mean_time_between_replies import TimeBetweenReplies
 from metrics.implementation.number_of_patches import NumberSnippets
+from metrics.implementation.collaboration_networks import CollaborationNetworks
 from refactorings.refactoring import RefactoringManager
 from statistical.wilcoxon import WilcoxonRankSumTest
 from utils.csv_handler import CSVHandler
@@ -178,6 +179,16 @@ class Main:
             wilcoxon = WilcoxonRankSumTest(database)
             wilcoxon.run()
 
+    def run_social_network(self):
+        for project in self.projects:
+            project_name = project['repo']
+            project_owner = project['owner']
+
+            database = self.mongo_connection[project_owner + '-' + project_name]
+
+            collaborationNetwork = CollaborationNetworks(project_owner, project_name, database)
+            print(collaborationNetwork.get_collaboration_networks_metrics())
+
 #Number of Reviews by the developer
 #Number of lines revised by the developer
 #Number of Files revised by developer
@@ -185,9 +196,11 @@ class Main:
 #Number of Commits by type of file (.java, .xml)
 
 main = Main()
-main.run_wilcoxon()
+#main.run_wilcoxon()
 #main.run_collector()
 #main.run_metrics()
+main.run_social_network()
+
 
 #main.output_results_oliveira()
 #main.collect_merged_commits_subset()
