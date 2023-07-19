@@ -26,10 +26,12 @@ class CollaborationNetworks:
             {"$sort": {"merged_at": 1}} # Sort the documents by "merged_at" in ascending order
         ])
 
+        all_collaboration_networks = {}
 
         for pull in pulls:
 
             social_network = self.get_social_network(pull)
+            print(social_network.graph)
 
             collaboration_networks = {
                 'social_degree': self.get_social_degree(social_network),
@@ -40,7 +42,9 @@ class CollaborationNetworks:
                 'social_k_coreness': self.get_social_k_coreness(social_network),
             }
             print(collaboration_networks)
-        return collaboration_networks
+            all_collaboration_networks[pull['number']] = collaboration_networks
+
+        return all_collaboration_networks
 
     def get_social_degree(self, social_network):
         social_degree = round(social_network.degree_centrality(), 4)

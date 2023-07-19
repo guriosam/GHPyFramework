@@ -23,7 +23,7 @@ class SocialNetwork:
 
     @staticmethod
     def _get_merged_by(pull):
-        if pull['merged_by']:
+        if pull['merged_by'] and pull['merged_by']['type'] != "Bot":
             user_login = pull['merged_by']['login']
             return user_login
 
@@ -56,8 +56,9 @@ class SocialNetwork:
     def _get_commentators(comments):
         commentators = set()
         for comment in comments:
+            if comment['user']['type'] == "Bot":
+                continue
             commentators.add(comment['user']['login'])
-
         return commentators
 
     def get_pull_requests(self):
@@ -68,6 +69,11 @@ class SocialNetwork:
                 "merged": True,
                 "merged_at": {"$lte": pull_target_merged_at}
             }},
+            {"$group": {
+                "_id": "$number",  # Group by "number"
+                "doc": {"$first": "$$ROOT"}  # Keep the first document of each group
+            }},
+            {"$replaceRoot": {"newRoot": "$doc"}},  # Replace the root of each document with the "doc" field
             {"$sort": {"merged_at": 1}}
         ])
 
@@ -82,12 +88,16 @@ class SocialNetwork:
         print(pull_target_author)
 
         for pull in pulls:
-            print(pull["number"])
-            print(self.pull_target["number"])
+            # print(pull["number"])
+            # print(self.pull_target["number"])
 
             # TODO check de o numero do pull request corrent eh diferent do referencia
 
             pull_author = self._get_pull_author(pull)
+            if pull_author:
+                pull_author = {pull_author}
+            else:
+                pull_author = {}
 
             pull_comments = self.database['comments'].find({'issue_number': pull['number']})
 
@@ -101,27 +111,26 @@ class SocialNetwork:
             reviewers = self._get_reviewers(pull)
 
             commentators = self._get_commentators(pull_comments)
-
             all_users = set()
-
             all_users.update(merged_by, reviewers, assignees, commentators, pull_author)
-            #if pull_target_author in all_users:
-            #    all_users.remove(pull_target_author)
+            if pull_target_author in all_users:
+                all_users.remove(pull_target_author)
 
             all_users = list(all_users)
-
             for participant in all_users:
                 if participant == pull_target_author:
                     continue
 
                 try:
-                    self.graph[pull_author][participant]['weight'] += 1
+                    self.graph[pull_target_author][participant]['weight'] += 1
                 except (KeyError, IndexError):
-                    self.graph.add_edge(pull_author, participant, weight=1)
+                    self.graph.add_edge(pull_target_author, participant, weight=1)
+
+            # if pull['number'] == self.pull_target['number']:
+            #     continue
 
     def show_graph(self):
-        nx.draw(self.graph)
-        plt.show()
+        print(nx.draw(self.graph))
 
     def largest_connected_component(self):
         try:
