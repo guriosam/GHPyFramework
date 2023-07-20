@@ -41,13 +41,17 @@ class CollaborationNetworks:
                 'social_clustering': self.get_social_clustering(social_network),
                 'social_k_coreness': self.get_social_k_coreness(social_network),
             }
+            self.database['pull_requests'].update_one({"number": pull['number']},
+                                    {'$set': {"collaboration_networks": [collaboration_networks]}})
+
+            print(pull['number'])
             print(collaboration_networks)
             all_collaboration_networks[pull['number']] = collaboration_networks
 
         return all_collaboration_networks
 
     def get_social_degree(self, social_network):
-        social_degree = round(social_network.degree_centrality(), 4)
+        social_degree = round(social_network.degree_centrality(), 4) 
         return social_degree
 
     def get_social_closeness(self, social_network):
