@@ -41,7 +41,7 @@ class CollaborationNetworks:
                 'social_clustering': self.get_social_clustering(social_network),
                 'social_k_coreness': self.get_social_k_coreness(social_network),
             }
-            self.database['pull_requests'].update_one({"number": pull['number']},
+            self.database['metrics'].update_one({"issue_number": pull['number']},
                                     {'$set': {"collaboration_networks": [collaboration_networks]}})
 
             print(pull['number'])
