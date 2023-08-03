@@ -87,7 +87,7 @@ class CommentAPI(APIInterface):
 
         while True:
 
-            comment = self.database_comments.find_one({'issue_number': issue_number})
+            comment = self.database_comments.find_one({'issue_number': int(issue_number)})
             if comment:
                 print('Comments of Issue number ' + str(issue_number) + ' already in the database.')
                 return comment
@@ -124,7 +124,7 @@ class CommentAPI(APIInterface):
 
         while True:
 
-            comment = self.database_reviews.find_one({'pull_number': pull_number})
+            comment = self.database_reviews.find_one({'issue_number': int(pull_number)})
             if comment:
                 print('Comments of Pull number ' + str(pull_number) + ' already in the database.')
                 return comment
