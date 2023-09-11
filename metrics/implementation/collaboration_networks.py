@@ -42,7 +42,13 @@ class CollaborationNetworks:
                 'social_k_coreness': self.get_social_k_coreness(social_network),
             }
             self.database['metrics'].update_one({"issue_number": pull['number']},
-                                    {'$set': {"collaboration_networks": [collaboration_networks]}})
+                                    {'$set': {"collaboration_networks": {
+                                        'social_degree': self.get_social_degree(social_network),
+                                        'social_closeness': self.get_social_closeness(social_network),
+                                        'social_betweenness': self.get_social_betweenness(social_network),
+                                        'social_eigenvector': self.get_social_eigenvector(social_network),
+                                        'social_clustering': self.get_social_clustering(social_network),
+                                        'social_k_coreness': self.get_social_k_coreness(social_network)}}})
 
             print(pull['number'])
             print(collaboration_networks)
