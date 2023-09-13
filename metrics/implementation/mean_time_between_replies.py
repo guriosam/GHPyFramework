@@ -24,7 +24,6 @@ class TimeBetweenReplies:
         self.repo = repo
         self.database = database
 
-
     def mean_time_between_replies(self):
         """
         Collect the mean time between comments inside an issue or pull request
@@ -36,20 +35,20 @@ class TimeBetweenReplies:
         database_pulls = self.database['pull_requests']
 
         comments_by_issue = database.aggregate([{
-                '$group': {
-                    '_id': '$issue_number',
-                    'comments': {
-                        '$addToSet': {
-                            'body': '$body',
-                            'created_at': '$created_at'
-                        }
+            '$group': {
+                '_id': '$issue_number',
+                'comments': {
+                    '$addToSet': {
+                        'body': '$body',
+                        'created_at': '$created_at'
                     }
                 }
-            },{
-                '$sort': {
-                    'created_at': -1
-                }
             }
+        }, {
+            '$sort': {
+                'created_at': -1
+            }
+        }
         ])
 
         for comments_obj in comments_by_issue:
@@ -57,11 +56,10 @@ class TimeBetweenReplies:
 
             comments = comments_obj['comments']
 
-
             total = 0
             delta = 0
             for i in range(0, len(comments) - 1):
-                delta = DateUtils().get_days_between_dates(comments[i]['created_at'], comments[i+1]['created_at'])
+                delta = DateUtils().get_days_between_dates(comments[i]['created_at'], comments[i + 1]['created_at'])
 
                 if delta < 0:
                     delta = delta * -1
@@ -70,8 +68,7 @@ class TimeBetweenReplies:
             mean_comments = 0
 
             if len(comments) > 0:
-                mean_comments = total/len(comments)
-
+                mean_comments = total / len(comments)
 
             total_words = 0
             cleaning = TextCleaner()
@@ -82,7 +79,7 @@ class TimeBetweenReplies:
 
             mean_words = 0
             if len(comments) > 0:
-                mean_words = total_words/len(comments)
+                mean_words = total_words / len(comments)
 
             if database_pulls.find_one({"number": issue_number}):
                 database_pulls.update_one({"number": issue_number},
@@ -92,20 +89,21 @@ class TimeBetweenReplies:
                                                 'number_of_words': total_words}})
             else:
                 database_pulls.insert_one({"number": issue_number,
-                                           'mean_time_between_comments': mean_comments, 'mean_number_of_words': mean_words,
+                                           'mean_time_between_comments': mean_comments,
+                                           'mean_number_of_words': mean_words,
                                            'number_of_words': total_words})
 
             if database_metrics.find_one({"issue_number": issue_number}):
                 database_metrics.update_one({"issue_number": issue_number},
-                                          {'$set':
-                                               {'mean_time_between_comments': mean_comments,
-                                                'mean_number_of_words': mean_words,
-                                                'number_of_words': total_words}})
+                                            {'$set':
+                                                 {'mean_time_between_comments': mean_comments,
+                                                  'mean_number_of_words': mean_words,
+                                                  'number_of_words': total_words}})
             else:
                 database_metrics.insert_one({"issue_number": issue_number,
-                                           'mean_time_between_comments': mean_comments, 'mean_number_of_words': mean_words,
-                                           'number_of_words': total_words})
-
+                                             'mean_time_between_comments': mean_comments,
+                                             'mean_number_of_words': mean_words,
+                                             'number_of_words': total_words})
 
     def mean_time_between_open_and_first_last_and_merge(self):
         """
@@ -118,20 +116,20 @@ class TimeBetweenReplies:
         database_pulls = self.database['pull_requests']
 
         comments_by_issue = database.aggregate([{
-                '$group': {
-                    '_id': '$issue_number',
-                    'comments': {
-                        '$addToSet': {
-                            'body': '$body',
-                            'created_at': '$created_at'
-                        }
+            '$group': {
+                '_id': '$issue_number',
+                'comments': {
+                    '$addToSet': {
+                        'body': '$body',
+                        'created_at': '$created_at'
                     }
                 }
-            },{
-                '$sort': {
-                    'created_at': -1
-                }
             }
+        }, {
+            '$sort': {
+                'created_at': -1
+            }
+        }
         ])
 
         for comments_obj in comments_by_issue:
@@ -148,7 +146,6 @@ class TimeBetweenReplies:
 
             last_comment = comments[-1]
 
-
             delta_first = DateUtils().get_days_between_dates(pull['created_at'], first_comment['created_at'])
 
             if delta_first < 0:
@@ -162,13 +159,26 @@ class TimeBetweenReplies:
             if delta_last < 0:
                 delta_last = delta_last * -1
 
-
             if not database_metrics.find_one({'issue_number': issue_number}):
                 database_metrics.insert_one({'issue_number': issue_number})
 
             database_metrics.update_one({'issue_number': issue_number}, {'$set':
-                                                                             {
-                                                                                'open_and_first': delta_first,
-                                                                                'last_and_close': delta_last}
-                                                                        })
+                {
+                    'open_and_first': delta_first,
+                    'last_and_close': delta_last}
+            })
 
+    def number_of_comments(self):
+        database_pulls = self.database['pull_requests']
+        database_metrics = self.database['metrics']
+
+        pulls = database_pulls.find({})
+
+        for pull in pulls:
+            issue_number = pull['number']
+
+            if not database_metrics.find_one({"issue_number": issue_number}):
+                database_metrics.insert_one({"issue_number": issue_number})
+
+            database_metrics.update_one({"issue_number": issue_number},
+                                        {'$set': {'number_of_comments': pull['comments']}})

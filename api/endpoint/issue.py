@@ -37,10 +37,24 @@ class IssueAPI(APIInterface):
         while True:
             issue_batch = self.apiHandler.request(request_url + str(page))
             if issue_batch:
-                issues.append(issue_batch)
                 for issue in issue_batch:
+                    if not issue['labels']:
+                        continue
+
+                    #labels = issue['labels']
+
+                    #skip = True
+                    #for label in labels:
+                    #    if 'bug' in label['name'].lower() or 'defect' in label['name'].lower():
+                    #        skip = False
+
+                    #if skip:
+                    #    continue
+
                     if self.database.find_one({'number': issue['number']}):
                         return issues
+
+                    issues.append(issue)
                 page = page + 1
             else:
                 break
@@ -60,14 +74,14 @@ class IssueAPI(APIInterface):
         #json = JSONHandler(self.path + self.repo + '/issues/individual/')
         issue = self.database.find_one({'number': number})
         if issue:
-            return issue
+            return issue, True
 
         issue = self.apiHandler.request(self.api_url + self.owner + '/' + self.repo + '/issues/' + str(number))
         if issue:
             #issue_json = json.dumps(issue)
             self.database.insert_one(issue)
-            return self.database.find_one({'number': number})
-        else:
-            print('Empty JSON of ' + str(number))
+            return self.database.find_one({'number': number}), False
 
-        return issue
+        print('Empty JSON of ' + str(number))
+
+        return issue, False

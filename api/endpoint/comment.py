@@ -40,38 +40,22 @@ class CommentAPI(APIInterface):
         :rtype: list
         """
 
-        pulls = self.database_pulls.find({})
+        try:
+            pulls = self.database_pulls.find({}, no_cursor_timeout=True)
 
-        for pull in pulls:
-            if review:
-                self.collect_single_review(str(pull['number']))
-            else:
-                self.collect_single(str(pull['number']))
+            for pull in pulls:
+                number_comments = int(pull['comments'])
+                if number_comments == 0:
+                    continue
 
-        #issues = self.database_issues.find({})
-
-        #for issue in issues:
-        #    self.collect_single(issue['issue_url'])
-
-        #request_url = self.api_url + self.owner + '/' + self.repo + '/issues/comments?page='
-        #page = 1
-        #comments = []
-
-        #while True:
-        #    comment_batch = self.apiHandler.request(request_url + str(page))
-        #    if not comment_batch:
-        #        break
-        #    comments.append(comment_batch)
-
-        #    for comment in comment_batch:
-        #        if self.database.find_one({'id': comment['id']}):
-        #            continue
-
-        #        self.database.insert_one({'id': comment['id']})
-
-        #    page = page + 1
-
-        #return comments
+                if review:
+                    self.collect_single_review(str(pull['number']))
+                else:
+                    comment, end = self.collect_single(str(pull['number']))
+                    if end:
+                        break
+        except:
+            pass
 
     def collect_single(self, issue_number: str):
         """
@@ -83,17 +67,17 @@ class CommentAPI(APIInterface):
         """
         page = 1
 
-        print("******* Comments of Issue number " + str(issue_number) + " *********")
-
         while True:
 
-            comment = self.database_comments.find_one({'issue_number': issue_number})
+            comment = self.database_comments.find_one({'issue_number': int(issue_number)})
             if comment:
                 print('Comments of Issue number ' + str(issue_number) + ' already in the database.')
-                return comment
+                return comment, True
 
             request_url = self.api_url + self.owner + '/' + self.repo + '/issues/' + str(issue_number) + \
                           '/comments?page=' + str(page)
+
+            print("******* Comments of Issue number " + str(issue_number) + " *********")
 
             comments = self.apiHandler.request(request_url)
 
@@ -102,13 +86,17 @@ class CommentAPI(APIInterface):
 
             for comment in comments:
                 comment['issue_number'] = int(issue_number)
+                comment_database = self.database_comments.find_one({'id': comment['id']})
+                if comment_database:
+                    return comment_database, True
+
                 self.database_comments.insert_one(comment)
 
             print('Comments of Issue number ' + str(issue_number) + ' saved.')
 
             page = page + 1
 
-        return self.database_comments.find({})
+        return self.database_comments.find({}), False
 
     def collect_single_review(self, pull_number: str):
         """
@@ -139,6 +127,11 @@ class CommentAPI(APIInterface):
 
             for comment in comments:
                 comment['pull_number'] = int(pull_number)
+
+                comment_database = self.database_reviews.find_one({'id': comment['id']})
+                if comment_database:
+                    return self.database_comments.find({})
+
                 self.database_reviews.insert_one(comment)
 
             print('Comments of Pull number ' + str(pull_number) + ' saved.')

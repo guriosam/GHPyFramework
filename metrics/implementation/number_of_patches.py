@@ -14,6 +14,7 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+
 class NumberSnippets:
 
     def __init__(self, owner: str, repo: str, database: Database = None):
@@ -40,7 +41,7 @@ class NumberSnippets:
             if not patches:
                 continue
 
-            number_patches = len(patches)/2
+            number_patches = len(patches) / 2
 
             patch_size = 0
 
@@ -49,19 +50,19 @@ class NumberSnippets:
             count = 1
             for patch in patch_content:
                 if count % 2 == 0:
-                    patch_size += len(patch.trim())
+                    patch_size += len(patch.strip())
                 count += 1
 
             patch_content_len = len(patch_content)
             if patch_content_len == 0:
                 patch_content_len = 1
 
-            mean_snippet = patch_size / (patch_content_len/2)
+            mean_snippet = patch_size / (patch_content_len / 2)
 
             database_comments.update_one({'id': comment['id']},
                                          {'$set': {'number_snippets': number_patches,
-                                          'snippets_size': patch_size,
-                                          'mean_snippets': mean_snippet}})
+                                                   'snippets_size': patch_size,
+                                                   'mean_snippets': mean_snippet}})
 
         comments = database_comments.aggregate([
             {
@@ -85,15 +86,18 @@ class NumberSnippets:
             snippets_size = 0
             mean_snippets = 0
             for snippets in comment['comments']:
-                number_snippets += snippets['number_snippets']
-                snippets_size += snippets['snippets_size']
-                mean_snippets += snippets['mean_snippets']
+                if 'number_snippets' in snippets.keys():
+                    number_snippets += snippets['number_snippets']
+                if 'snippets_size' in snippets.keys():
+                    snippets_size += snippets['snippets_size']
+                if 'mean_snippets' in snippets.keys():
+                    mean_snippets += snippets['mean_snippets']
 
             if not self.database['pull_requests'].find_one({'number': issue_number}):
                 self.database['pull_requests'].insert_one({'number': issue_number})
 
             self.database['pull_requests'].update_one({'number': issue_number}, {'$set':
-                                        {'number_snippets': number_snippets,
-                                          'snippets_size': snippets_size,
-                                          'mean_snippets': mean_snippets}})
-
+                                                                                 {
+                                                                                     'number_snippets': number_snippets,
+                                                                                     'snippets_size': snippets_size,
+                                                                                     'mean_snippets': mean_snippets}})

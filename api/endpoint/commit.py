@@ -41,13 +41,18 @@ class CommitAPI(APIInterface):
         request_url = self.api_url + self.owner + '/' + self.repo + '/commits?page='
         while True:
             commit_batch = self.apiCall.request(request_url + str(page))
+
             if not commit_batch:
                 break
 
-            commits.append(commit_batch)
             for commit in commit_batch:
+                #if '#' not in commit['commit']['message']:
+                #    continue
+
                 if self.database.find_one({'sha': commit['sha']}):
-                    continue
+                    return commits
+
+                commits.append(commit)
 
             page = page + 1
 
@@ -67,15 +72,15 @@ class CommitAPI(APIInterface):
         commit = self.database.find_one({'sha': sha})
         if commit:
             print('Commit ' + str(sha) + ' already in the database')
-            return commit
+            return commit, True
 
         commit = self.apiCall.request(self.api_url + self.owner + '/' + self.repo + '/commits/' + sha)
 
         if commit:
             self.database.insert_one(commit)
             print('Commit ' + str(sha) + ' saved')
-            return self.database.find_one({'sha': sha})
+            return self.database.find_one({'sha': sha}), False
         else:
             print('Empty JSON of ' + sha)
 
-        return commit
+        return commit, False

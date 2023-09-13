@@ -1,13 +1,13 @@
 from pymongo.database import Database
 from utils.date import DateUtils
 
-
 __author__ = "Caio Barbosa"
 __license__ = "GPL"
 __version__ = "1.0"
 __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
+
 
 class DiscussionSize:
 
@@ -36,10 +36,9 @@ class DiscussionSize:
 
             if self.database['metrics'].find_one({"issue_number": pull_request['number']}):
                 self.database['metrics'].update_one({"issue_number": pull_request['number']},
-                                                        {"$set":{"discussion_size": pull_request['comments']}})
+                                                    {"$set": {"discussion_size": pull_request['comments']}})
 
                 continue
 
             self.database['metrics'].insert_one(
                 {"issue_number": pull_request['number'], "discussion_size": pull_request['comments']})
-

@@ -45,11 +45,27 @@ class PullsAPI(APIInterface):
         while True:
             pull_batch = self.apiHandler.request(request_url + str(page))
             if pull_batch:
-                pulls.append(pull_batch)
+
+
 
                 for pull in pull_batch:
+                    #if not pull['labels']:
+                    #    continue
+
+                    #labels = pull['labels']
+
+                    #skip = True
+                    #for label in labels:
+                    #    if 'bug' in label['name'].lower() or 'defect' in label['name'].lower():
+                    #        skip = False
+
+                    #if skip:
+                    #    continue
+
                     if self.database.find_one({'number': pull['number']}):
-                        continue
+                        return pulls
+
+                    pulls.append(pull)
 
                 page = page + 1
             else:
@@ -74,19 +90,19 @@ class PullsAPI(APIInterface):
         issue = self.root_database['issues'].find_one({'number': number})
 
         if issue:
-            self.root_database['issues'].remove({'number': number})
+            self.root_database['issues'].remove({'number': number}), True
 
         if pull:
             print('PR ' + str(number) + ' already in the database')
-            return pull
+            return pull, True
 
         pull = self.apiHandler.request(self.api_url + self.owner + '/' + self.repo + '/pulls/' + str(number))
         if pull:
             self.database.insert_one(pull)
             print('PR ' + str(number) + ' saved')
-            return self.database.find_one({'number': number})
-        else:
-            print('Empty JSON of ' + str(number))
+            return self.database.find_one({'number': number}), False
 
-        return pull
+        print('Empty JSON of ' + str(number))
+
+        return pull, False
 

@@ -47,10 +47,10 @@ class NumberOf:
 
             if database_users.find_one({"username": username}):
                 database_users.update_one({"username": username},
-                                    {'$set': {'number_of_comments': comments['number_of_comments']}})
+                                          {'$set': {'number_of_comments': comments['number_of_comments']}})
             else:
                 database_users.insert_one({"username": username,
-                                    'number_of_comments': comments['number_of_comments']})
+                                           'number_of_comments': comments['number_of_comments']})
 
     def get_number_of_words_comments_by_user(self):
         """
@@ -85,23 +85,24 @@ class NumberOf:
             if not username:
                 continue
 
-            total_all_words, total_mean_words, total_mean_comments = self._get_user_total_words_and_mean_comments(issues)
+            total_all_words, total_mean_words, total_mean_comments = self._get_user_total_words_and_mean_comments(
+                issues)
 
             mean_duration = self._get_user_discussion_duration(database_metrics, issues)
 
             if database_users.find_one({"username": username}):
                 database_users.update_one({"username": username},
                                           {'$set': {
-                                                    'total_words': total_all_words,
-                                                    'mean_words': total_mean_words,
-                                                    'mean_time_between_comments': total_mean_comments,
-                                                    'mean_discussion_duration': mean_duration}})
+                                              'total_words': total_all_words,
+                                              'mean_words': total_mean_words,
+                                              'mean_time_between_comments': total_mean_comments,
+                                              'mean_discussion_duration': mean_duration}})
             else:
                 database_users.insert_one({"username": username,
                                            'total_words': total_all_words,
-                                                    'mean_words': total_mean_words,
-                                                    'mean_time_between_comments': total_mean_comments,
-                                                    'mean_discussion_duration': mean_duration})
+                                           'mean_words': total_mean_words,
+                                           'mean_time_between_comments': total_mean_comments,
+                                           'mean_discussion_duration': mean_duration})
 
     def get_number_of_reviews_by_developer(self):
         database_reviews = self.database['reviews']
@@ -201,7 +202,8 @@ class NumberOf:
     def get_size_of_commits_by_user(self):
         print("#### Size of Commits ####")
 
-        size_of_commits = self._get_avg_of(self.database['commits'], '$author.login', 'avg_size_of_commits', '$stats.total')
+        size_of_commits = self._get_avg_of(self.database['commits'], '$author.login', 'avg_size_of_commits',
+                                           '$stats.total')
 
         database_users = self.database['users']
 
@@ -232,10 +234,10 @@ class NumberOf:
 
             if database_users.find_one({"username": username}):
                 database_users.update_one({"username": username},
-                                    {'$set': {'number_of_merged_prs': len(merged_prs['merged_prs'])}})
+                                          {'$set': {'number_of_merged_prs': len(merged_prs['merged_prs'])}})
             else:
                 database_users.insert_one({"username": username,
-                                    'number_of_merged_prs': len(merged_prs['merged_prs'])})
+                                           'number_of_merged_prs': len(merged_prs['merged_prs'])})
 
     def get_number_of_prs_opened_by_user(self):
         print("#### Number of PRs Opened ####")
@@ -296,7 +298,7 @@ class NumberOf:
             total = 0
 
             for i in range(0, len(prs) - 1):
-                if prs[i+1]['merged_at'] and prs[i]['merged_at']:
+                if prs[i + 1]['merged_at'] and prs[i]['merged_at']:
                     delta = DateUtils().get_days_between_dates(prs[i + 1]['merged_at'], prs[i]['merged_at'])
                 else:
                     delta = DateUtils().get_days_between_dates(prs[i + 1]['updated_at'], prs[i]['updated_at'])
@@ -308,8 +310,7 @@ class NumberOf:
 
             mean = 0
             if len(prs) > 0:
-                mean = total/len(prs)
-
+                mean = total / len(prs)
 
             if database_users.find_one({"username": username}):
                 database_users.update_one({"username": username},
@@ -344,10 +345,10 @@ class NumberOf:
 
             if database_users.find_one({"username": username}):
                 database_users.update_one({"username": username},
-                                    {'$set': {'label_rank': user_rank}})
+                                          {'$set': {'label_rank': user_rank}})
             else:
                 database_users.insert_one({"username": username,
-                                    'label_rank': user_rank})
+                                           'label_rank': user_rank})
 
     @staticmethod
     def _get_avg_of(database, element, label, avg_value):
@@ -389,7 +390,7 @@ class NumberOf:
                         }
                     }
                 }
-            },{
+            }, {
                 '$sort': {
                     'created_at': -1
                 }
@@ -413,7 +414,7 @@ class NumberOf:
 
     @staticmethod
     def _get_commits_by_file_type(database):
-        commits_with_files = database.find({'files': { '$exists': True, '$not': {'$size': 0} }})
+        commits_with_files = database.find({'files': {'$exists': True, '$not': {'$size': 0}}})
 
         commits_with_java = []
         commits_with_xml = []
@@ -434,27 +435,27 @@ class NumberOf:
     @staticmethod
     def _get_user_merged_prs(database):
         return database.aggregate([
-                {
-                    '$match': {
-                        'merged': True
-                    }
-                }, {
-                    '$group': {
-                        '_id': '$merged_by.login',
-                        'merged_prs': {
-                            '$addToSet': {
-                                'prs': '$number',
-                                'merged_at': '$merged_at',
-                                'updated_at': '$updated_at'
-                                }
-                            }
-                    }
-                }, {
-                    '$sort': {
-                        'updated_at': -1,
-                        'merged_at': -1
+            {
+                '$match': {
+                    'merged': True
+                }
+            }, {
+                '$group': {
+                    '_id': '$merged_by.login',
+                    'merged_prs': {
+                        '$addToSet': {
+                            'prs': '$number',
+                            'merged_at': '$merged_at',
+                            'updated_at': '$updated_at'
+                        }
                     }
                 }
+            }, {
+                '$sort': {
+                    'updated_at': -1,
+                    'merged_at': -1
+                }
+            }
         ])
 
     @staticmethod
@@ -471,9 +472,10 @@ class NumberOf:
                 pull = int(pull)
                 if database_pulls.find_one({'number': pull}):
                     database_pulls.update_one({'number': pull}, {'$set': {'merged_by': commit['author'],
-                                                                      'merge_commit_sha': commit['sha'],
-                                                                      'merged_at': commit['commit']['author']['date'],
-                                                                 'merged': True}})
+                                                                          'merge_commit_sha': commit['sha'],
+                                                                          'merged_at': commit['commit']['author'][
+                                                                              'date'],
+                                                                          'merged': True}})
 
     @staticmethod
     def _get_avg_user_merged_prs(database):
@@ -535,11 +537,11 @@ class NumberOf:
             total_words = len(body.split())
             _id = comment['_id']
             database.update_one({'_id': _id},
-                {
-                '$set':{
-                    'total_words': total_words
-                }
-            })
+                                {
+                                    '$set': {
+                                        'total_words': total_words
+                                    }
+                                })
 
     @staticmethod
     def _get_user_discussion_duration(database_metrics, issues):
@@ -562,7 +564,7 @@ class NumberOf:
         if count == 0:
             count = 1
 
-        mean_duration = mean_duration/count
+        mean_duration = mean_duration / count
 
         return mean_duration
 
@@ -603,7 +605,3 @@ class NumberOf:
             total_mean_words += mean_words
 
         return total_mean_comments, total_all_words, total_mean_words
-
-
-
-

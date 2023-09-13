@@ -7,6 +7,7 @@ __maintainer__ = "Caio Barbosa"
 __email__ = "csilva@inf.puc-rio.br"
 __status__ = "Production"
 
+from utils.common_mongo_queries import CommonQueries
 from utils.date import DateUtils
 
 
@@ -115,19 +116,20 @@ class DeveloperStatus:
 
             if database_metrics.find_one({'issue_number': issue_number}):
                 database_metrics.update_one({'issue_number': issue_number},
-                    {"$set": {
-                        "newbies": len(type_users[issue_number]['newbies']),
-                        "contributors": len(type_users[issue_number]['contributors']),
-                        "core_developers": len(type_users[issue_number]['core'])
-                    }})
+                                            {
+                                                "$set": {
+                                                    "newbies": len(type_users[issue_number]['newbies']),
+                                                    "contributors": len(type_users[issue_number]['contributors']),
+                                                    "core_developers": len(type_users[issue_number]['core'])
+                                                }})
                 continue
             database_users.insert_one({
-                        'issue_number': issue_number,
-                        "newbies": len(type_users[issue_number]['newbies']),
-                        "contributors": len(type_users[issue_number]['contributors']),
-                        "core_developers": len(type_users[issue_number]['core']),
-                        "opened_by": opened_by[issue_number]
-                    })
+                'issue_number': issue_number,
+                "newbies": len(type_users[issue_number]['newbies']),
+                "contributors": len(type_users[issue_number]['contributors']),
+                "core_developers": len(type_users[issue_number]['core']),
+                "opened_by": opened_by[issue_number]
+            })
 
     @staticmethod
     def _check_user_status(author_association: str):
@@ -141,16 +143,15 @@ class DeveloperStatus:
             return "NEWCOMER"
 
     def turnover(self):
-
         print("#### User Turnover ####")
 
         database_pulls = self.database['pull_requests']
         database_comments = self.database['comments']
         database_commits = self.database['commits']
 
-        prs_by_user = self._get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
-        comments_by_user = self._get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
-        commits_by_user = self._get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
+        prs_by_user = CommonQueries.get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
+        comments_by_user = CommonQueries.get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
+        commits_by_user = CommonQueries.get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
 
         user_action = {}
 
@@ -173,21 +174,18 @@ class DeveloperStatus:
 
             if database_users.find_one({"username": user}):
                 database_users.update_one({"username": user},
-                                    {'$set': {"interacted_before_180_days": before,
-                                    "interacted_within_180_days": within,
-                                     "turnover": status}})
+                                          {'$set': {"interacted_before_180_days": before,
+                                                    "interacted_within_180_days": within,
+                                                    "turnover": status}})
             else:
                 database_users.insert_one({"username": user,
-                                    "interacted_before_180_days": before,
-                                    "interacted_within_180_days": within,
+                                           "interacted_before_180_days": before,
+                                           "interacted_within_180_days": within,
                                            "turnover": status})
 
         users = database_users.find()
 
-        
-
     def experience(self):
-
         print("#### User Experience ####")
 
         database_pulls = self.database['pull_requests']
@@ -195,9 +193,9 @@ class DeveloperStatus:
         database_commits = self.database['commits']
         database_users = self.database['users']
 
-        prs_by_user = self._get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
-        comments_by_user = self._get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
-        commits_by_user = self._get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
+        prs_by_user = CommonQueries.get_user_interactions(database_pulls, 'user_pulls', 'pr_number', '$number')
+        comments_by_user = CommonQueries.get_user_interactions(database_comments, 'user_comments', 'comment_id', '$id')
+        commits_by_user = CommonQueries.get_user_interactions(database_commits, 'user_commits', 'commit', '$sha')
 
         user_days = {}
         user_days = self._get_first_day(prs_by_user, user_days, 'user_pulls', 'pr_days')
@@ -209,10 +207,10 @@ class DeveloperStatus:
 
             if database_users.find_one({"username": user}):
                 database_users.update_one({"username": user},
-                                    {'$set': {'experience_in_days': bigger}})
+                                          {'$set': {'experience_in_days': bigger}})
             else:
                 database_users.insert_one({"username": user,
-                                    'experience_in_days': bigger})
+                                           'experience_in_days': bigger})
 
     @staticmethod
     def _get_first_day(array, user_days, group_key, elem_key):
@@ -234,30 +232,6 @@ class DeveloperStatus:
             user_days[username][elem_key] = DateUtils.days_between_date_and_now(first['created_at'])
 
         return user_days
-
-    @staticmethod
-    def _get_user_interactions(database, group_key, push_key, push_value):
-
-        push = {push_key: push_value, 'created_at': '$created_at'}
-        push_commit = {push_key: push_value, 'created_at': '$commit.author.date'}
-
-        if 'commit' in group_key:
-            push = push_commit
-
-        return database.aggregate([
-            {
-                '$group': {
-                    '_id': '$user.login',
-                    group_key: {
-                        '$push': push
-                    }
-                }
-            }, {
-                '$sort': {
-                    'created_at': -1
-                }
-            }
-        ])
 
     @staticmethod
     def _check_interactions_days(elements, key, last_user_action):
@@ -297,5 +271,3 @@ class DeveloperStatus:
             type_users[issue_number]['contributors'].add(user_login)
         elif user_status == 'CORE_DEVELOPER':
             type_users[issue_number]['core'].add(user_login)
-
-

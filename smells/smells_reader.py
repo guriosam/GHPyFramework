@@ -19,6 +19,8 @@ class SmellsReader:
 
         self._save_json_in_database(project_smells)
 
+        self._save_smells_on_metrics()
+
     def _save_json_in_database(self, smells_json):
 
         if not smells_json:
@@ -40,9 +42,6 @@ class SmellsReader:
 
             c_dc_diversity, m_dc_diversity, c_deg_diversity, m_deg_diversity = \
                 self._check_diversity(commit_smells, 'class_diff', 'method_diff')
-
-            print(c_dc_density, m_dc_density, c_deg_density, m_deg_density)
-            print(c_dc_diversity, m_dc_diversity, c_deg_diversity, m_deg_diversity)
 
             if not database_smells.find_one({'sha': commit['sha']}):
                 database_smells.insert_one({'sha': commit['sha']})
@@ -114,4 +113,41 @@ class SmellsReader:
             degradation_method_level = True
 
         return design_change_class_level, design_change_method_level, degradation_class_level, degradation_method_level
+
+    def _save_smells_on_metrics(self):
+        database_metrics = self.database['metrics']
+        database_pulls = self.database['pull_requests']
+        database_smells = self.database['commits_smells']
+
+        smells = database_smells.find({})
+
+        for smell in smells:
+            sha = smell['sha']
+
+            pulls = database_pulls.find({'merge_commit_sha': sha})
+
+            for pull in pulls:
+                issue_number = pull['number']
+
+                if database_metrics.find_one({'issue_number': issue_number}):
+                    database_metrics.insert_one({'issue_number': issue_number})
+
+                database_metrics.update_one({'issue_number': issue_number},
+                                       {'$set': {'num_class_lvl': smell['num_class_lvl'],
+                                           'diff_class_lvl': smell['diff_class_lvl'],
+                                           'num_method_lvl': smell['num_method_lvl'],
+                                           'diff_method_lvl': smell['diff_method_lvl'],
+                                           'class_diff': smell['class_diff'],
+                                           'method_diff': smell['method_diff'],
+                                           'class_design_change_density': smell['class_design_change_density'],
+                                           'method_design_change_density': smell['method_design_change_density'],
+                                           'class_degradation_density': smell['class_degradation_density'],
+                                           'method_degradation_density': smell['method_degradation_density'],
+                                           'class_design_change_diversity': smell['class_design_change_diversity'],
+                                           'method_design_change_diversity': smell['method_design_change_diversity'],
+                                           'class_degradation_diversity': smell['class_degradation_diversity'],
+                                           'method_degradation_diversity': smell['method_degradation_diversity']}})
+
+
+
 
