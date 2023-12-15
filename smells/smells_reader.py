@@ -77,10 +77,10 @@ class SmellsReader:
         if commit_smells[method_level] != 0:
             design_change_method_level = True
 
-        if commit_smells[class_level] >= 0:
+        if commit_smells[class_level] > 0:
             degradation_class_level = True
 
-        if commit_smells[method_level] >= 0:
+        if commit_smells[method_level] > 0:
             degradation_method_level = True
 
         return design_change_class_level, design_change_method_level, degradation_class_level, degradation_method_level
@@ -106,10 +106,10 @@ class SmellsReader:
         if total_method != 0:
             design_change_method_level = True
 
-        if total_class >= 0:
+        if total_class > 0:
             degradation_class_level = True
 
-        if total_method >= 0:
+        if total_method > 0:
             degradation_method_level = True
 
         return design_change_class_level, design_change_method_level, degradation_class_level, degradation_method_level

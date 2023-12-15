@@ -189,9 +189,9 @@ class Main:
         # NumberOf(project_owner, project_name, database).get_number_of_words_comments_by_user()
 
     def run(self):
-        self.run_collector()
-        self.pre_processing_data_before_metrics()
-        self.run_metrics()
+        #self.run_collector()
+        #self.pre_processing_data_before_metrics()
+        #self.run_metrics()
         SmellsMain().run()
 
     def export_cases(self):
@@ -383,3 +383,4 @@ class Main:
 main = Main()
 # main.calc_blau_index()
 main.run()
+#main.dump_database()
